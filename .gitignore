@@ -1,0 +1,10 @@
+
+*.png
+
+*.class
+
+*.prefs
+
+.project
+
+.classpath
