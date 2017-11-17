@@ -6,9 +6,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import org.armanious.graph.SimpleGraph;
+import org.armanious.graph.Graph;
 
-public class ProteinInteractionGraph extends SimpleGraph<Protein> {
+public class ProteinInteractionGraph extends Graph<Protein> {
 
 	public ProteinInteractionGraph(int threshold) throws IOException {
 		this(threshold, "/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.links.v10.5.txt");

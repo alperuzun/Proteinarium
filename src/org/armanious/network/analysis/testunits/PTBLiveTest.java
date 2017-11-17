@@ -17,6 +17,7 @@ import java.util.function.Function;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.armanious.graph.Edge;
 import org.armanious.graph.Graph;
 import org.armanious.graph.LayeredGraph;
 import org.armanious.io.IOUtils;
@@ -207,17 +208,17 @@ public class PTBLiveTest {
 
 		final Function<String, LayeredGraph<Protein>> graphReader = filename -> {
 			final LayeredGraph<Protein> lg = new LayeredGraph<>();
-			final HashMap<Protein, Integer> counts = new HashMap<>();
+			final HashMap<Protein, Double> counts = new HashMap<>();
 			try(final BufferedReader br = new BufferedReader(new FileReader(filename))){
 				String s;
 				while((s = br.readLine()) != null){
 					final String[] parts = s.split("\t");
 					switch(parts.length){
 					case 2:
-						counts.put(Protein.getProtein(parts[0]), Integer.parseInt(parts[1]));
+						counts.put(Protein.getProtein(parts[0]), Double.parseDouble(parts[1]));
 						break;
 					case 3:
-						lg.forceAddEdge(Protein.getProtein(parts[0]), Protein.getProtein(parts[1]), Integer.parseInt(parts[2]), false);
+						lg.addEdge(new Edge<>(Protein.getProtein(parts[0]), Protein.getProtein(parts[1]), Integer.parseInt(parts[2])));
 						break;
 					default:
 						throw new RuntimeException();

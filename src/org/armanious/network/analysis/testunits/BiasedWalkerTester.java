@@ -13,7 +13,7 @@ import java.util.PriorityQueue;
 import java.util.Set;
 
 import org.armanious.Tuple;
-import org.armanious.graph.SimpleGraph;
+import org.armanious.graph.Graph;
 import org.armanious.network.analysis.BiasedWalker;
 import org.armanious.network.analysis.Gene;
 import org.armanious.network.analysis.Protein;
@@ -89,7 +89,7 @@ public class BiasedWalkerTester {
 		for(int i = 0; i < maxSubgraphSize && i < orderedDistribution.size(); i++){
 			nodes.add(orderedDistribution.get(i).val1());
 		}
-		final SimpleGraph<Protein> subgraph = pig.subgraphWithNodes(nodes);
+		final Graph<Protein> subgraph = pig.subgraphWithNodes(nodes);
 		System.out.println("Attempting to layout " + subgraph.getNodes().size() + " nodes.");
 		final ForceDirectedLayout<Protein> fdl = new ForceDirectedLayout<>(subgraph, .01, .5, 1);
 		fdl.layout();

@@ -47,7 +47,7 @@ public class Gene {
 	}
 	
 	public int hashCode(){
-		return getSymbol().hashCode();
+		return hgncId;
 	}
 	
 	public boolean equals(Object o){

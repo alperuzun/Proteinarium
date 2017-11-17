@@ -9,39 +9,76 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.PriorityQueue;
 import java.util.function.Function;
 
 import org.armanious.Tuple;
 
-public abstract class Graph<K> {
+public class Graph<K> {
 	
-	public abstract void addEdge(K src, K target, int weight, boolean bidirectional);
+	final HashMap<K, HashSet<Edge<K>>> neighbors = new HashMap<>();
 	
-	public abstract Collection<K> getNodes();
+	public void addEdge(Edge<K> edge){
+		if(!neighbors.containsKey(edge.getSource())) neighbors.put(edge.getSource(), new HashSet<>());
+		if(!neighbors.containsKey(edge.getTarget())) neighbors.put(edge.getTarget(), new HashSet<>());
+		neighbors.get(edge.getSource()).add(edge);
+	}
 	
-	public abstract Collection<Edge<K>> getNeighbors(K n);
+	public Collection<K> getNodes(){
+		return neighbors.keySet();
+	}
 	
-	public Tuple<ArrayList<K>, Integer> dijkstras(K source, K target){
+	public Collection<Edge<K>> getNeighbors(K n){
+		return neighbors.get(n);
+	}
+
+	public void removeNode(K k) {
+		neighbors.remove(k);
+		for(HashSet<Edge<K>> edges : neighbors.values()){
+			final Iterator<Edge<K>> iter = edges.iterator();
+			while(iter.hasNext()){
+				if(iter.next().getTarget().equals(k)){
+					iter.remove();
+				}
+			}
+		}
+	}
+	
+	public void addEdge(K src, K target){
+		addEdge(src, target, 1);
+	}
+	
+	public void addEdge(K src, K target, int weight){
+		addEdge(src, target, weight, true);
+	}
+	
+	public final void addEdge(K src, K target, int weight, boolean bidirectional){
+		addEdge(new Edge<>(src, target, weight));
+		if(bidirectional) addEdge(new Edge<>(target, src, weight));
+	}
+
+	public final Tuple<ArrayList<Edge<K>>, Integer> dijkstras(K source, K target){
 		return dijkstras(source, target, e -> e.getWeight());
 	}
-	
-	public Tuple<ArrayList<K>, Integer> dijkstras(K source, K target, Function<Edge<K>, Integer> cost){
+
+	public final Tuple<ArrayList<Edge<K>>, Integer> dijkstras(K source, K target, Function<Edge<K>, Integer> cost){
 		return dijkstras(source, target, cost, Integer.MAX_VALUE, Integer.MAX_VALUE);
 	}
-	
-	public Tuple<ArrayList<K>, Integer> dijkstras(K source, K target, Function<Edge<K>, Integer> cost, int maxPathCost, int maxPathLength){
+
+	public final Tuple<ArrayList<Edge<K>>, Integer> dijkstras(K source, K target, Function<Edge<K>, Integer> cost, int maxPathCost, int maxPathLength){
 		final HashMap<K, Integer> distances = new HashMap<>();
 		final HashMap<K, Integer> lengths = new HashMap<>();
-		final HashMap<K, K> prev = new HashMap<>();
-		
+		final HashMap<K, Edge<K>> prev = new HashMap<>();
+
 		distances.put(source, 0);
 		lengths.put(source, 1);
 		prev.put(source, null);
-		
+
 		final PriorityQueue<K> queue = new PriorityQueue<>(Comparator.comparing(k -> distances.get(k)));
 		queue.add(source);
-		
+
 		while(!queue.isEmpty()){
 			final K cur = queue.poll();
 			final int currentCost = distances.get(cur);
@@ -54,50 +91,59 @@ public abstract class Graph<K> {
 						&& currentCost + edgeCost <= maxPathCost){
 					distances.put(next, currentCost + edgeCost);
 					lengths.put(next, currentLength + 1);
-					prev.put(next, cur);
+					prev.put(next, edge);
 					queue.remove(next);
 					queue.add(next);
 				}
 			}
 		}
-		
-		ArrayList<K> path = new ArrayList<>();
-		K cur = target;
+
+		ArrayList<Edge<K>> path = new ArrayList<>();
+		Edge<K> cur = prev.get(target);
 		while(cur != null){
 			path.add(cur);
-			cur = prev.get(cur);
+			cur = prev.get(cur.getSource());
 		}
 		Collections.reverse(path);
 		return new Tuple<>(path, distances.getOrDefault(target, Integer.MAX_VALUE));
 	}
-	
-	public SimpleGraph<K> subgraphWithNodes(Collection<K> nodes){
-		return subgraphWithNodes(new SimpleGraph<>(), nodes);
+
+	@Deprecated
+	public Graph<K> subgraphWithNodes(Collection<K> nodes){
+		return subgraphWithNodes(new Graph<>(), nodes);
 	}
-	
+
+	@Deprecated
 	public <G extends Graph<K>> G subgraphWithNodes(G g, Collection<K> nodes) {
 		for(K k : nodes)
 			for(Edge<K> e : getNeighbors(k))
 				if(nodes.contains(e.getTarget()))
 					g.addEdge(k, e.getTarget(), e.getWeight(), false);
-		for(K node : nodes)
-			if(getNeighbors(node).size() == 0)
-				getNeighbors(node).remove(node);
 		return g;
 	}
 	
+	public Graph<K> subgraphWithEdges(Collection<Edge<K>> edges){
+		return subgraphWithEdges(new Graph<>(), edges);
+	}
+
+	public <G extends Graph<K>> G subgraphWithEdges(G g, Collection<Edge<K>> edges) {
+		for(Edge<K> e : edges)
+			g.addEdge(e);
+		return g;
+	}
+
 	void saveNodeState(BufferedWriter bw, K node) throws IOException {
 		bw.write(String.valueOf(node));
 	}
-	
+
 	void saveEdgeState(BufferedWriter bw, Edge<K> edge) throws IOException {
 		bw.write(String.valueOf(edge.getSource()) + "\t" + String.valueOf(edge.getTarget()) + "\t" + String.valueOf(edge.getWeight()));
 	}
-	
+
 	public void saveTo(String file) throws IOException {
 		saveTo(new FileWriter(file));
 	}
-	
+
 	public void saveTo(Writer out) throws IOException {
 		final BufferedWriter bw = out instanceof BufferedWriter ? (BufferedWriter) out : new BufferedWriter(out);
 		for(K node : getNodes()){
@@ -113,6 +159,5 @@ public abstract class Graph<K> {
 		bw.flush();
 		bw.close();
 	}
-
 
 }

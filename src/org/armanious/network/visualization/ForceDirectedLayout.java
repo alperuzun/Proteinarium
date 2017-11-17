@@ -91,7 +91,7 @@ public class ForceDirectedLayout<K> {
 	public void layout(){
 		System.out.println("Laying out graph with " + nodes.length + " nodes...");
 		System.out.flush();
-		int max = 10000;
+		int max = 5000;
 		int cur = 0;
 		while(!Thread.interrupted() && cur++ < max)
 			if(!iterateLayout())

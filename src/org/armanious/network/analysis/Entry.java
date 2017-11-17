@@ -21,6 +21,7 @@ import org.armanious.Tuple;
 import org.armanious.graph.Edge;
 import org.armanious.graph.Graph;
 import org.armanious.graph.LayeredGraph;
+import org.armanious.network.analysis.testunits.PTBLiveTest;
 import org.armanious.network.visualization.ForceDirectedLayout;
 import org.armanious.network.visualization.Renderer;
 
@@ -40,7 +41,8 @@ public class Entry {
 	private final double layoutRepulsionConstant;
 	private final double layoutAttractionConstant;
 	private final double layoutDeltaThreshold;
-
+	
+	private final double percentageKept;
 
 	private final Set<Protein> casesProteinSet = new HashSet<>();
 	private final Set<Protein> controlsProteinSet = new HashSet<>();
@@ -69,6 +71,8 @@ public class Entry {
 		layoutRepulsionConstant = 0.15;
 		layoutAttractionConstant = 0.01;
 		layoutDeltaThreshold = 1E-3;
+		
+		percentageKept = 0.10;
 	}
 
 	private static final Scanner in = new Scanner(System.in);
@@ -83,17 +87,17 @@ public class Entry {
 
 		final LayeredGraph<Protein> layeredGraph = new LayeredGraph<>();
 		if(f.exists()){
-			final HashMap<Protein, Integer> counts = new HashMap<>();
+			final HashMap<Protein, Double> counts = new HashMap<>();
 			try(final BufferedReader br = new BufferedReader(new FileReader(f))){
 				String s;
 				while((s = br.readLine()) != null){
 					final String[] parts = s.split("\t");
 					switch(parts.length){
 					case 2:
-						counts.put(Protein.getProtein(parts[0]), Integer.parseInt(parts[1]));
+						counts.put(Protein.getProtein(parts[0]), Double.parseDouble(parts[1]));
 						break;
 					case 3:
-						layeredGraph.forceAddEdge(Protein.getProtein(parts[0]), Protein.getProtein(parts[1]), Integer.parseInt(parts[2]), false);
+						layeredGraph.addEdge(new Edge<>(Protein.getProtein(parts[0]), Protein.getProtein(parts[1]), Integer.parseInt(parts[2])));
 						break;
 					default:
 						throw new RuntimeException();
@@ -107,9 +111,12 @@ public class Entry {
 			for(Collection<Gene> geneSet : geneSets.values()){
 				final Set<Protein> proteinsFromGeneSet = getProteinsFromGeneSet(geneSet);
 				System.out.println("Finding all-pairs paths between " + proteinsFromGeneSet.size() + " proteins from " + geneSet);
-				final ArrayList<Tuple<ArrayList<Protein>, Integer>> allPairwisePaths = pairwisePaths(proteinsFromGeneSet.toArray(new Protein[proteinsFromGeneSet.size()]));
-				final Map<Protein, Integer> filterCountsByProtein = getPathNodeCounts(allPairwisePaths);
-				layeredGraph.addGraph(pig.subgraphWithNodes(filterCountsByProtein.keySet()));
+				final ArrayList<Tuple<ArrayList<Edge<Protein>>, Integer>> allPairwisePaths = pairwisePaths(proteinsFromGeneSet.toArray(new Protein[proteinsFromGeneSet.size()]));
+				//final Map<Protein, Integer> filterCountsByProtein = getPathNodeCounts(allPairwisePaths);
+				final Set<Edge<Protein>> edges = new HashSet<>();
+				for(Tuple<ArrayList<Edge<Protein>>, Integer> path : allPairwisePaths)
+					edges.addAll(path.val1());
+				layeredGraph.addGraph(pig.subgraphWithEdges(edges));
 			}
 		}
 		return layeredGraph;
@@ -123,14 +130,18 @@ public class Entry {
 			final LayeredGraph<Protein> casesLayeredGraph = computeLayeredGraph(casesGeneSets, filePrefix  + "Cases");
 			casesLayeredGraph.saveTo(filePrefix + "Cases.txt");
 			toRender.put(casesLayeredGraph, filePrefix + "Cases.png");
-
+			System.out.println("Cases: " + casesLayeredGraph.getNodes().size() + " nodes.");
+ 
 			if(controlsGeneSets != null){
 				System.out.println("Computing layered graph for controls gene sets");
 				final LayeredGraph<Protein> controlsLayeredGraph = computeLayeredGraph(controlsGeneSets, filePrefix + "Controls");
+				System.out.println("Controls: " + controlsLayeredGraph.getNodes().size() + " nodes.");
+				
 				if(controlsLayeredGraph.getNodes().size() > 0){
 					controlsLayeredGraph.saveTo(filePrefix + "Controls.txt");
 					toRender.put(controlsLayeredGraph, filePrefix + "Controls.png");
-					final LayeredGraph<Protein> casesMinusControls = casesLayeredGraph.subtract(controlsLayeredGraph).subtract(controlsLayeredGraph);
+					
+					final LayeredGraph<Protein> casesMinusControls = casesLayeredGraph.subtract(controlsLayeredGraph);
 					if(casesMinusControls.getNodes().size() > 0){
 						toRender.put(casesMinusControls, filePrefix + "CasesMinusControls.png");
 						final HashSet<Protein> seeds = new HashSet<>();
@@ -145,18 +156,13 @@ public class Entry {
 						toRender.put(furtherInvestigation, filePrefix + "CasesMinusControlsMostImportant.png");
 					}
 					
-					
-					final LayeredGraph<Protein> doubledControls = controlsLayeredGraph.subgraphWithNodes(new LayeredGraph<>(), controlsLayeredGraph.getNodes());
-					for(Protein p : doubledControls.getNodes()) doubledControls.setCount(p, doubledControls.getCount(p) * 2);
-					final LayeredGraph<Protein> controlsMinusCases = doubledControls.subtract(casesLayeredGraph);
+					final LayeredGraph<Protein> controlsMinusCases = controlsLayeredGraph.subtract(casesLayeredGraph);
 					if(controlsMinusCases.getNodes().size() > 0)
 						toRender.put(controlsMinusCases, filePrefix + "ControlsMinusCases.png");
 				}
-			}
-
-			for(LayeredGraph<Protein> lg : toRender.keySet()){
-				layoutAndRender(lg, toRender.get(lg));
-			}
+			}			
+			
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -165,16 +171,14 @@ public class Entry {
 	public void layoutAndRender(LayeredGraph<Protein> graph, String filename) throws IOException {
 		assert(graph.getNodes().size() > 0);
 		
-		final double PERCENTAGE_KEPT = 0.1;
-		
 		final LayeredGraph<Protein> reducedGraph = graph.subgraphWithNodes(new LayeredGraph<>(),
 				Arrays.asList(
 						graph.getNodes().stream()
-						.sorted((p1, p2) -> graph.getCount(p2) - graph.getCount(p1))
-						.limit((long)Math.ceil(PERCENTAGE_KEPT * graph.getNodes().size()))
+						.sorted((p1, p2) -> Double.compare(graph.getCount(p2), graph.getCount(p1)))
+						.limit((long)Math.ceil(percentageKept * graph.getNodes().size()))
 						.toArray(i -> new Protein[i])
 				));
-		System.out.println(reducedGraph.getNodes().size());
+		System.out.println("Keeping " + reducedGraph.getNodes().size() + " nodes from the initial " + graph.getNodes().size());
 		
 		final Function<Graph<Protein>, Function<Protein, Double>> sizeFunctionGenerator = g -> {
 			int maxEdgeCount = 0;
@@ -209,9 +213,9 @@ public class Entry {
 		renderer.setLabelFunction(p -> p.getGene() == null ? p.getId() : p.getGene().getSymbol());
 		final Color yellowGreen = new Color(180, 255, 0);
 
-		final int LOWER_ALPHA_BOUND = 10;
+		final int LOWER_ALPHA_BOUND = 30;
 		final int UPPER_ALPHA_BOUND = 255;
-		final int MAXIMUM_NUM = reducedGraph.getMaxCount();
+		final double MAXIMUM_NUM = reducedGraph.getMaxCount();
 		renderer.setNodeColorFunction(p -> {
 			final boolean isCase = casesProteinSet.contains(p);
 			final boolean isControl = controlsProteinSet.contains(p);
@@ -226,13 +230,13 @@ public class Entry {
 		renderer.saveTo(new File(filename));
 	}
 
-	private Map<Protein, Integer> getPathNodeCounts(ArrayList<Tuple<ArrayList<Protein>, Integer>> paths){
+	/*private Map<Protein, Integer> getPathNodeCounts(ArrayList<Tuple<ArrayList<Protein>, Integer>> paths){
 		final Map<Protein, Integer> map = new HashMap<>();
 		for(Tuple<ArrayList<Protein>, Integer> path : paths)
 			for(Protein protein : path.val1())
 				map.put(protein, map.getOrDefault(protein, 0) + 1);
 		return map;
-	}
+	}*/
 
 	private static Set<Protein> getProteinsFromGeneSet(Collection<Gene> geneSet) {
 		final Set<Protein> proteins = new HashSet<>();
@@ -242,9 +246,9 @@ public class Entry {
 		return proteins;
 	}
 
-	private final HashMap<Protein, HashMap<Protein, Tuple<ArrayList<Protein>, Integer>>> cache = new HashMap<>();
-	private final ArrayList<Tuple<ArrayList<Protein>, Integer>> pairwisePaths(Protein[] endpoints){
-		final ArrayList<Tuple<ArrayList<Protein>, Integer>> paths = new ArrayList<>();
+	private final HashMap<Protein, HashMap<Protein, Tuple<ArrayList<Edge<Protein>>, Integer>>> cache = new HashMap<>();
+	private final ArrayList<Tuple<ArrayList<Edge<Protein>>, Integer>> pairwisePaths(Protein[] endpoints){
+		final ArrayList<Tuple<ArrayList<Edge<Protein>>, Integer>> paths = new ArrayList<>();
 		for(int i = 0; i < endpoints.length - 1; i++){
 			System.out.println("Dijkstra's starting at..." + endpoints[i].getGene().getSymbol());
 			for(int j = i + 1; j < endpoints.length; j++){
@@ -253,7 +257,7 @@ public class Entry {
 				if(!cache.containsKey(endpoints[j]))
 					cache.put(endpoints[j], new HashMap<>());
 				if(!cache.get(endpoints[i]).containsKey(endpoints[j])){
-					final Tuple<ArrayList<Protein>, Integer> path =  pig.dijkstras(endpoints[i], endpoints[j], e -> (1000 - e.getWeight()), pathUncofidenceThreshold, pathLengthThreshold);
+					final Tuple<ArrayList<Edge<Protein>>, Integer> path =  pig.dijkstras(endpoints[i], endpoints[j], e -> (1000 - e.getWeight()), pathUncofidenceThreshold, pathLengthThreshold);
 					cache.get(endpoints[i]).put(endpoints[j], path);
 					cache.get(endpoints[j]).put(endpoints[i], path);
 				}
@@ -268,18 +272,22 @@ public class Entry {
 
 	//from TP53 network on ptbdb
 	//target CASE gene set: MCL1, TERT, VDR, BCL2
-	/*private static final String[][] CASES_GENE_SET_IDS = {
+	private static final String[][] CASES_GENE_SET_IDS = {
 			{"MCL1", "TERT", "BCL2", "TAF1"},
 			{"TERT", "VDR", "BCL2"},
 			{"VDR", "MCL1", "TERT", "BCL2"},
-	};*/
+	};
 	//target CONTROL gene set: VHL, HSPA4, TERT
-	/*private static final String[][] CONTROLS_GENE_SET_IDS = {
+	private static final String[][] CONTROLS_GENE_SET_IDS = {
 			{"VHL", "HSPA4", "TERT"},
 			{"VHL", "TERT", "TAF1"},
 			{"TERT", "BCL2", "VHL"}
-	};*/
-	/*public static void main(String...args) throws IOException {
+	};
+	public static void main(String...args) throws Throwable {
+		PTBLiveTest.main(args);
+		System.exit(0);
+		
+		
 		Gene.initializeGeneDatabase(new File("/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.aliases.v10.5.hgnc_with_symbol.txt")); //TODO FIXME
 
 		Map<String, Collection<Gene>> casesGeneSets = new HashMap<>();
@@ -333,7 +341,7 @@ public class Entry {
 
 		renderer.saveTo(new File("test.png"));
 		Desktop.getDesktop().open(new File("test.png"));*/
-	//}
+	}
 
 	private static Map<String, String> parseArguments(String[] args){
 		final HashMap<String, String> argMap = new HashMap<>();

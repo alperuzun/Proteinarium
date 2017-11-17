@@ -4,7 +4,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.HashMap;
 
-public class AnnotatedGraph<K, T extends Comparable<T>> extends SimpleGraph<K> {
+public class AnnotatedGraph<K, T extends Comparable<T>> extends Graph<K> {
 	
 	private final HashMap<K, T> annotations = new HashMap<>();
 	private final T defaultAnnotation;
@@ -26,11 +26,10 @@ public class AnnotatedGraph<K, T extends Comparable<T>> extends SimpleGraph<K> {
 		annotations.remove(k);
 	}
 	
-	@Override
-	public void addEdge(K src, K target, int weight, boolean bidirectional) {
-		super.addEdge(src, target, weight, bidirectional);
-		if(!annotations.containsKey(src)) annotations.put(src, defaultAnnotation);
-		if(!annotations.containsKey(target)) annotations.put(target, defaultAnnotation);
+	public void addEdge(Edge<K> edge) {
+		super.addEdge(edge);
+		if(!annotations.containsKey(edge.getSource())) annotations.put(edge.getSource(), defaultAnnotation);
+		if(!annotations.containsKey(edge.getTarget())) annotations.put(edge.getTarget(), defaultAnnotation);
 	}
 	
 	@Override

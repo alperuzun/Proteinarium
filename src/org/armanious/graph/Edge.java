@@ -45,7 +45,7 @@ public class Edge<K> {
 	}
 	
 	public int hashCode(){
-		return toString().hashCode();
+		return src.hashCode() * 37 + weight * 19 + target.hashCode() * 53;
 	}
 
 }
