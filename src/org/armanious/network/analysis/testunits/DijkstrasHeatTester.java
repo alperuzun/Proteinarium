@@ -5,28 +5,26 @@ import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.PriorityQueue;
 import java.util.Set;
 
 import org.armanious.Tuple;
-import org.armanious.graph.SimpleGraph;
+import org.armanious.graph.HeatGraph;
 import org.armanious.network.analysis.Gene;
 import org.armanious.network.analysis.Protein;
 import org.armanious.network.analysis.ProteinInteractionGraph;
 import org.armanious.network.visualization.ForceDirectedLayout;
 import org.armanious.network.visualization.Renderer;
 
-public class DijkstrasTester {
-	
-	private DijkstrasTester(){}
-	
+public class DijkstrasHeatTester {
+
+	private DijkstrasHeatTester(){}
+
 	public static void test(String...geneIds) throws IOException {
 		Gene.initializeGeneDatabase(new File("/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.aliases.v10.5.hgnc_with_symbol.txt"));
-		
+
 		final ProteinInteractionGraph pig = new ProteinInteractionGraph(400);
 		final Gene[] genes = Gene.getGenes(geneIds);
 		final Set<Protein> proteinSet = new HashSet<>();
@@ -36,68 +34,88 @@ public class DijkstrasTester {
 			}
 		}
 		final Protein[] proteins = proteinSet.toArray(new Protein[proteinSet.size()]);
-		
+
+		//final int MAX_UNCONFIDENCE = 200;
+		//final int MAX_PATH_LENGTH = 10;
+
 		System.out.println("---SUCCESSFUL PATHS---");
 		final HashMap<Protein, Integer> counts = new HashMap<>();
 		for(int i = 0; i < proteins.length; i++){
 			for(int j = i + 1; j < proteins.length; j++){
 				final Tuple<ArrayList<Protein>, Integer> path = pig.dijkstras(
 						proteins[i], proteins[j], (e) -> 1000 - e.getWeight());
+				final boolean takingPath = true;//path.val1().size() <= MAX_PATH_LENGTH && path.val2() <= MAX_UNCONFIDENCE;
 
-				final StringBuilder sb = new StringBuilder();
+				final StringBuilder sb = new StringBuilder(takingPath ? "" : "[X] ");
 				sb.append(path.val2()).append(": ");
 				for(Protein p : path.val1()){
-					counts.put(p, counts.getOrDefault(p, 0) + 1);
+					if(takingPath) counts.put(p, counts.getOrDefault(p, 0) + 1);
 					sb.append(p.getGene() != null ? p.getGene().getSymbol() : p.getId()).append(',');
 				}
 				System.out.println(sb.substring(0, sb.length() - 1));
 			}
 		}
-		
+
 		System.out.println("\n\n\n---NODE DISTRIBUTIONS---");
-		final PriorityQueue<Protein> entries = new PriorityQueue<>(counts.size(), Comparator.comparing(p -> -counts.get(p)));
+		final ArrayList<Tuple<Protein, Integer>> entries = new ArrayList<>(counts.size());
 		int sum = 0;
 		for(Protein p : counts.keySet()){
-			entries.add(p);
+			entries.add(new Tuple<>(p, counts.get(p)));
 			sum += counts.get(p);
 		}
-		
-		for(Protein p : entries){
+		Collections.sort(entries, (t1, t2) -> t2.val2() - t1.val2());
+
+		for(Tuple<Protein, Integer> t : entries){
+			final Protein p = t.val1();
 			System.out.println((p.getGene() == null ? p.getId() : p.getGene().getSymbol())
-					+ "\t" + counts.get(p) / (double)sum);
+					+ "\t" + t.val2() / (double)sum + "\t" + t.val2());
 		}
 
-		final int maxSubgraphSize = 30;
-		final ArrayList<Protein> nodes = new ArrayList<>();
-		final Iterator<Protein> iter = entries.iterator();
-		for(int i = 0; i < maxSubgraphSize && iter.hasNext(); i++){
-			nodes.add(iter.next());
+		final HeatGraph<Protein> subgraph = pig.subgraphWithNodes(new HeatGraph<Protein>(), counts.keySet());
+		for(Protein p : subgraph.getNodes()){
+			subgraph.setHeat(p, counts.get(p) * 10);
 		}
-		final SimpleGraph<Protein> subgraph = pig.subgraphWithNodes(nodes);
+		subgraph.diffuseHeat();
+		System.out.println("\n\n\n---NODE TEMPERATURES AFTER DIFFUSION---");
+		double maxHeat = 0;
+		for(Tuple<Protein, Integer> t : entries){
+			final Protein p = t.val1();
+			if(subgraph.getHeat(p) > maxHeat) maxHeat = subgraph.getHeat(p);
+			System.out.println((p.getGene() == null ? p.getId() : p.getGene().getSymbol())
+					+ (counts.get(p) * 10) + "\t-->\t" + subgraph.getHeat(p));
+		}
+
 		System.out.println("Attempting to layout " + subgraph.getNodes().size() + " nodes.");
-		final ForceDirectedLayout<Protein> fdl = new ForceDirectedLayout<>(subgraph, .01, .5, 1);
+		final ForceDirectedLayout<Protein> fdl = new ForceDirectedLayout<>(subgraph, .005, 1.5, 1,
+				p -> subgraph.getHeat(p));
 		fdl.layout();
 		for(int i = 0; i < fdl.positions.length; i++){
 			System.out.println(fdl.nodes[i] + "\t" + fdl.positions[i]);
 		}
+
+		final double finalMaxHeat = maxHeat;
 		final Renderer<Protein> r = new Renderer<>(fdl);
 		r.setLabelFunction(p -> p.getGene() == null ? p.getId() : p.getGene().getSymbol());
-		r.setNodeColorFunction(p -> proteinSet.contains(p) ? Color.YELLOW : Color.RED);
-		final File file = new File("dijkstras.png");
+		r.setNodeColorFunction(p -> { 
+			if(proteinSet.contains(p)) return Color.YELLOW;
+			final double h = subgraph.getHeat(p) / finalMaxHeat;
+			return new Color((int) (255 * h), 0, (int) (255 * (1 - h)));
+		});
+		final File file = new File("dijkstrasHeat.png");
 		r.saveTo(file);
 		Desktop.getDesktop().open(file);
 	}
-	
+
 	public static void performTest(){
 		try {
-			DijkstrasTester.test(
-					"HSPA5", "TP53");
+			DijkstrasHeatTester.test(
+					"ESR1", "HSPA5", "MIF", "MCL1", "HOXA9");
 		} catch (IOException e) {
 			System.err.println("Dijkstra's test failed:");
 			e.printStackTrace();
 		}
 	}
-	
+
 	public static void main(String...args){
 		performTest();
 	}

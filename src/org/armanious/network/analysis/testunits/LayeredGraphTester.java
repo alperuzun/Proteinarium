@@ -20,9 +20,9 @@ import org.armanious.network.analysis.ProteinInteractionGraph;
 import org.armanious.network.visualization.ForceDirectedLayout;
 import org.armanious.network.visualization.Renderer;
 
-public class DijkstrasTester {
+public class LayeredGraphTester {
 	
-	private DijkstrasTester(){}
+	private LayeredGraphTester(){}
 	
 	public static void test(String...geneIds) throws IOException {
 		Gene.initializeGeneDatabase(new File("/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.aliases.v10.5.hgnc_with_symbol.txt"));
@@ -90,7 +90,7 @@ public class DijkstrasTester {
 	
 	public static void performTest(){
 		try {
-			DijkstrasTester.test(
+			LayeredGraphTester.test(
 					"HSPA5", "TP53");
 		} catch (IOException e) {
 			System.err.println("Dijkstra's test failed:");

@@ -2,6 +2,7 @@ package org.armanious.network.visualization;
 
 import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -21,14 +22,30 @@ import javax.imageio.ImageIO;
 import org.armanious.graph.Edge;
 
 public class Renderer<K> {
-
-	private final BufferedImage image;
 	
-	public Renderer(ForceDirectedLayout<K> fd){
-		this(fd, k -> k.toString(), k -> Color.RED, e -> Color.BLACK);
-	}
+	private static final Font DEFAULT_FONT = new Font("Dialog", Font.PLAIN, 12);
+	private final ForceDirectedLayout<K> fdl;
+	
+	private Function<K, String> labelFunction = k -> String.valueOf(k);
+	private Function<K, Font> labelFontFunction = k -> DEFAULT_FONT;
+	private Function<K, Color> labelColorFunction = k -> Color.BLACK;
+	
+	private Function<K, Color> nodeColorFunction = k -> Color.RED;
+	private Function<K, Double> nodeOpaquenessFunction = k -> 1D;
+	
+	private Function<Edge<K>, Color> edgeColorFunction = k -> Color.BLACK;
+	private Function<Edge<K>, Double> edgeThicknessFunction = k -> 1D;
 
-	public Renderer(ForceDirectedLayout<K> fdl, Function<K, String> label, Function<K, Color> nodeColor, Function<Edge<K>, Color> edgeColor){
+	private Function<K, Color> nodeBorderColorFunction = k -> Color.BLACK;
+	private Function<K, Double> nodeBorderThicknessFunction = k -> 1D;
+	
+	private BufferedImage image = null;
+	
+	public Renderer(ForceDirectedLayout<K> fdl){
+		this.fdl = fdl;
+	}
+	
+	private void redraw(){
 		final double padding = 0.25;
 		
 		double minX = Double.MAX_VALUE;
@@ -64,11 +81,11 @@ public class Renderer<K> {
 			positions[i] = new Point2D.Double(old.x + translationX, height - (old.y + translationY));
 		}
 		
-		if(width * height < 0){
+		if((long) width * height > Integer.MAX_VALUE){
 			System.out.println("Integer overflow error; (" + width + ", " + height + ")");
 			throw new RuntimeException();
 		}
-		
+		System.out.println("Attempting to create buffered image with width=" + width + ", height=" + height);
 		image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		final Graphics2D g = image.createGraphics();
 		g.setRenderingHints(new RenderingHints(
@@ -76,34 +93,85 @@ public class Renderer<K> {
 				RenderingHints.VALUE_ANTIALIAS_ON));
 		g.setComposite(AlphaComposite.Clear);
 		g.fillRect(0, 0, width, height);
-		g.setComposite(AlphaComposite.Src);
+		g.setComposite(AlphaComposite.SrcOver);
 		
 		for(int i = 0; i < positions.length; i++){
 			final Point2D.Double start = positions[i];
 			final Line2D.Double line = new Line2D.Double(start.x, start.y, 0, 0);
-			for(int end : fdl.neighbors[i]){
-				line.setLine(start, positions[end]);
-				g.setColor(edgeColor.apply(new Edge<K>(fdl.nodes[i], fdl.nodes[end])));
+			for(int j = 0; j < fdl.neighbors[i].length; j++){
+				line.setLine(start, positions[fdl.neighbors[i][j]]);
+				g.setColor(edgeColorFunction.apply(fdl.edges.get(i).get(j)));
 				g.draw(line);
 			}
 		}
-		g.setFont(g.getFont().deriveFont(14f));
 		final Ellipse2D.Double node = new Ellipse2D.Double();
-	    final FontMetrics metrics = g.getFontMetrics(g.getFont());
 		for(int i = 0; i < positions.length; i++){
 			node.setFrame(positions[i].x - fdl.radii[i], positions[i].y - fdl.radii[i], fdl.radii[i] * 2, fdl.radii[i] * 2);
-			g.setColor(nodeColor.apply(fdl.nodes[i]));
+			g.setColor(nodeColorFunction.apply(fdl.nodes[i]));
+			g.setComposite(AlphaComposite.Clear);
 			g.fill(node);
-			g.setColor(Color.BLACK);
+			g.setComposite(AlphaComposite.SrcOver);
+			g.fill(node);
+			g.setColor(nodeBorderColorFunction.apply(fdl.nodes[i]));
 			g.draw(node);
 			
-			final String nodeLabel = label.apply(fdl.nodes[i]);
+			g.setFont(labelFontFunction.apply(fdl.nodes[i]));
+		    final FontMetrics metrics = g.getFontMetrics(g.getFont());
+		    
+			final String nodeLabel = labelFunction.apply(fdl.nodes[i]);
+			//nodeLabel += " (" + fdl.neighbors[i].length + ", " + Math.round(fdl.radii[i]*100)/100.0 + ")";
 			final int strWidth = metrics.stringWidth(nodeLabel);
 			final int strHeight = metrics.getHeight();
+			g.setColor(labelColorFunction.apply(fdl.nodes[i]));
 			g.drawString(nodeLabel,
 					(float) (positions[i].x - fdl.radii[i] * 0.9 + (1.8 * fdl.radii[i] - strWidth) * 0.5),
 					(float) (positions[i].y - strHeight * 0.5 + metrics.getAscent()));
 		}
+	}
+	
+	public void setLabelFunction(Function<K, String> labelFunction){
+		this.labelFunction = labelFunction;
+		image = null;
+	}
+	
+	public void setLabelFontFunction(Function<K, Font> labelFontFunction){
+		this.labelFontFunction = labelFontFunction;
+		image = null;
+	}
+	
+	public void setLabelColorFunction(Function<K, Color> labelColorFunction){
+		this.labelColorFunction = labelColorFunction;
+		image = null;
+	}
+	
+	public void setNodeColorFunction(Function<K, Color> nodeColorFunction){
+		this.nodeColorFunction = nodeColorFunction;
+		image = null;
+	}
+	
+	public void setNodeOpaquenessFunction(Function<K, Double> nodeOpaquenessFunction){
+		this.nodeOpaquenessFunction = nodeOpaquenessFunction;
+		image = null;
+	}
+	
+	public void setEdgeColorFunction(Function<Edge<K>, Color> edgeColorFunction){
+		this.edgeColorFunction = edgeColorFunction;
+		image = null;
+	}
+	
+	public void setEdgeThicknessFunction(Function<Edge<K>, Double> edgeThicknessFunction){
+		this.edgeThicknessFunction = edgeThicknessFunction;
+		image = null;
+	}
+	
+	public void setNodeBorderColorFunction(Function<K, Color> nodeBorderColorFunction){
+		this.nodeBorderColorFunction = nodeBorderColorFunction;
+		image = null;
+	}
+	
+	public void setNodeBorderThicknessFunction(Function<K, Double> nodeBorderThicknessFunction){
+		this.nodeBorderThicknessFunction = nodeBorderThicknessFunction;
+		image = null;
 	}
 
 	public void saveTo(File file) throws IOException {
@@ -111,6 +179,7 @@ public class Renderer<K> {
 	}
 
 	public void saveTo(OutputStream out) throws IOException {
+		if(image == null) redraw();
 		final BufferedOutputStream bos = (BufferedOutputStream) (out instanceof BufferedOutputStream ? out : new BufferedOutputStream(out));
 		ImageIO.write(image, "PNG", bos);
 	}

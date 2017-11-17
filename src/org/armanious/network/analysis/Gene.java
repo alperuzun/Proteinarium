@@ -59,12 +59,16 @@ public class Gene {
 	}
 	
 	public static Gene getGene(String symbol){
+		if(genesBySymbol == null)
+			throw new IllegalStateException("Gene database not yet initialized");
+		assert(genesBySymbol.containsKey(symbol));
 		return genesBySymbol.get(symbol);
 	}
 	
 	public static Gene getGene(int id){
 		if(genesById == null)
 			throw new IllegalStateException("Gene database not yet initialized");
+		assert(genesById.containsKey(id));
 		return genesById.get(id);
 	}
 	
@@ -72,7 +76,11 @@ public class Gene {
 		if(ids == null) return null;
 		final Gene[] arr = new Gene[ids.length];
 		for(int i = 0; i < ids.length; i++){
-			arr[i] = Gene.getGene(ids[i]);
+			try{
+				arr[i] = Gene.getGene(Integer.parseInt(ids[i]));
+			}catch(NumberFormatException e){
+				arr[i] = Gene.getGene(ids[i]);
+			}
 		}
 		return arr;
 	}
@@ -86,7 +94,8 @@ public class Gene {
 			throw new IllegalStateException("Gene database already initialized");
 		genesById = new HashMap<>();
 		genesBySymbol = new HashMap<>();
-		
+		System.out.print("Initializing gene database...");
+		System.out.flush();
 		if(!(r instanceof BufferedReader))
 			r = new BufferedReader(r);
 		BufferedReader br = (BufferedReader) r;
@@ -99,6 +108,7 @@ public class Gene {
 			if(gene == null) gene = new Gene(id, parts[2]);
 			gene.addProtein(new Protein(parts[0], gene));
 		}
+		System.out.println("finished");
 	}
 
 }

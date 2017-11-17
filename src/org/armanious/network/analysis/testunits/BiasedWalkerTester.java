@@ -13,7 +13,7 @@ import java.util.PriorityQueue;
 import java.util.Set;
 
 import org.armanious.Tuple;
-import org.armanious.graph.Graph;
+import org.armanious.graph.SimpleGraph;
 import org.armanious.network.analysis.BiasedWalker;
 import org.armanious.network.analysis.Gene;
 import org.armanious.network.analysis.Protein;
@@ -89,19 +89,15 @@ public class BiasedWalkerTester {
 		for(int i = 0; i < maxSubgraphSize && i < orderedDistribution.size(); i++){
 			nodes.add(orderedDistribution.get(i).val1());
 		}
-		final Graph<Protein> subgraph = pig.subgraphWithNodes(nodes);
+		final SimpleGraph<Protein> subgraph = pig.subgraphWithNodes(nodes);
 		System.out.println("Attempting to layout " + subgraph.getNodes().size() + " nodes.");
 		final ForceDirectedLayout<Protein> fdl = new ForceDirectedLayout<>(subgraph, .01, .5, 1);
 		fdl.layout();
-		for(int i = 0; i < fdl.positions.length; i++){
-			System.out.println(fdl.nodes[i] + "\t" + fdl.positions[i]);
-		}
-		final Renderer<Protein> r = new Renderer<>(
-				fdl,
-				p -> p.getGene() == null ? p.getId() : p.getGene().getSymbol(),
-				p -> proteins.contains(p) ? Color.YELLOW : Color.RED,
-				e -> entries.contains(e.getSource()) || entries.contains(e.getTarget()) ? Color.BLACK : Color.YELLOW);
-		final File file = new File("test.png");
+		final Renderer<Protein> r = new Renderer<>(fdl);
+		r.setLabelFunction(p -> p.getGene() == null ? p.getId() : p.getGene().getSymbol());
+		r.setNodeColorFunction(p -> proteins.contains(p) ? Color.YELLOW : Color.RED);
+		r.setEdgeColorFunction(e -> entries.contains(e.getSource()) || entries.contains(e.getTarget()) ? Color.BLACK : Color.YELLOW);
+		final File file = new File("biasedwalker.png");
 		r.saveTo(file);
 		Desktop.getDesktop().open(file);
 
@@ -109,8 +105,8 @@ public class BiasedWalkerTester {
 
 	public static void performTest(){
 		try {
-			//BiasedWalkerTester.test(10, 10000, 0.2, 30, "ESR1", "HSPA5", "MIF", "MCL1", "HOXA9");
-			BiasedWalkerTester.test(10, 10000, 0.2, 30, "VEGFA", "MYC", "STAT3");
+			BiasedWalkerTester.test(10, 10000, 0.2, 25, "ESR1", "HSPA5", "MIF", "MCL1", "HOXA9");
+			//BiasedWalkerTester.test(10, 10000, 0.2, 12, "VEGFA", "MYC", "STAT3");
 		} catch (IOException e) {
 			System.err.println("BiasedWalker test failed:");
 			e.printStackTrace();

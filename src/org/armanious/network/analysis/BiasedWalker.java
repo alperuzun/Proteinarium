@@ -8,13 +8,13 @@ import java.util.Random;
 import java.util.Set;
 
 import org.armanious.graph.Edge;
-import org.armanious.graph.ImmutableGraph;
+import org.armanious.graph.Graph;
 
 public class BiasedWalker<K> {
 
 	private static final Random random = new Random();
 
-	private final ImmutableGraph<K> g;
+	private final Graph<K> g;
 	private final K[] startVertices;
 	private final double restartProbability;
 
@@ -25,7 +25,7 @@ public class BiasedWalker<K> {
 	private ArrayList<K> curPath = new ArrayList<>();
 	private Set<ArrayList<K>> successfulPaths = new HashSet<>();
 
-	public BiasedWalker(ImmutableGraph<K> graph, K[] startVertices, double restartProbability){
+	public BiasedWalker(Graph<K> graph, K[] startVertices, double restartProbability){
 		this.g = graph;
 		this.startVertices = startVertices.clone();
 		this.restartProbability = restartProbability;
@@ -56,19 +56,19 @@ public class BiasedWalker<K> {
 				final Collection<Edge<K>> allCandidates = g.getNeighbors(curNode);
 				
 				//Go anywhere version
-				/*for(Edge<K> edge : allCandidates)
+				for(Edge<K> edge : allCandidates)
 					sum += edge.getWeight();
-				final Collection<Edge<K>> candidates = allCandidates;*/
+				final Collection<Edge<K>> candidates = allCandidates;
 				
 				//Don't ever backtrack version
-				final ArrayList<Edge<K>> properCandidates = new ArrayList<>(allCandidates.size());
+				/*final ArrayList<Edge<K>> properCandidates = new ArrayList<>(allCandidates.size());
 				for(Edge<K> edge : allCandidates){
 					if(!curPath.contains(edge.getTarget())){
 						properCandidates.add(edge);
 						sum += edge.getWeight();
 					}
 				}				
-				final Collection<Edge<K>> candidates = properCandidates;
+				final Collection<Edge<K>> candidates = properCandidates;*/
 				
 				if(sum == 0){
 					System.out.println("Failed path; restarting...");
@@ -85,9 +85,10 @@ public class BiasedWalker<K> {
 					}
 				}
 			}
-			curPath.add(curNode);
-			nodeCounts.put(curNode, nodeCounts.getOrDefault(curNode, 0) + 1);
-			totalSteps++;
+			if(curPath.add(curNode)){
+				nodeCounts.put(curNode, nodeCounts.getOrDefault(curNode, 0) + 1);
+				totalSteps++;
+			}
 
 			if(curNode != curStartNode){
 				boolean successfulPath = false;
