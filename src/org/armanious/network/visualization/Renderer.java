@@ -1,6 +1,7 @@
 package org.armanious.network.visualization;
 
 import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -31,13 +32,13 @@ public class Renderer<K> {
 	private Function<K, Color> labelColorFunction = k -> Color.BLACK;
 	
 	private Function<K, Color> nodeColorFunction = k -> Color.RED;
-	private Function<K, Double> nodeOpaquenessFunction = k -> 1D;
+	//private Function<K, Float> nodeOpaquenessFunction = k -> 1f;
 	
 	private Function<Edge<K>, Color> edgeColorFunction = k -> Color.BLACK;
-	private Function<Edge<K>, Double> edgeThicknessFunction = k -> 1D;
-
+	private Function<Edge<K>, Float> edgeThicknessFunction = k -> 1f;
+	
 	private Function<K, Color> nodeBorderColorFunction = k -> Color.BLACK;
-	private Function<K, Double> nodeBorderThicknessFunction = k -> 1D;
+	private Function<K, Float> nodeBorderThicknessFunction = k -> 1f;
 	
 	private BufferedImage image = null;
 	
@@ -85,6 +86,7 @@ public class Renderer<K> {
 			System.out.println("Integer overflow error; (" + width + ", " + height + ")");
 			throw new RuntimeException();
 		}
+		
 		System.out.println("Attempting to create buffered image with width=" + width + ", height=" + height);
 		image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		final Graphics2D g = image.createGraphics();
@@ -95,12 +97,15 @@ public class Renderer<K> {
 		g.fillRect(0, 0, width, height);
 		g.setComposite(AlphaComposite.SrcOver);
 		
+		//TODO cache BasicStroke objects by width
 		for(int i = 0; i < positions.length; i++){
 			final Point2D.Double start = positions[i];
 			final Line2D.Double line = new Line2D.Double(start.x, start.y, 0, 0);
 			for(int j = 0; j < fdl.neighbors[i].length; j++){
 				line.setLine(start, positions[fdl.neighbors[i][j]]);
-				g.setColor(edgeColorFunction.apply(fdl.edges.get(i).get(j)));
+				final Edge<K> edge = fdl.edges.get(i).get(j);
+				g.setColor(edgeColorFunction.apply(edge));
+				g.setStroke(new BasicStroke(edgeThicknessFunction.apply(edge)));
 				g.draw(line);
 			}
 		}
@@ -113,6 +118,7 @@ public class Renderer<K> {
 			g.setComposite(AlphaComposite.SrcOver);
 			g.fill(node);
 			g.setColor(nodeBorderColorFunction.apply(fdl.nodes[i]));
+			g.setStroke(new BasicStroke(nodeBorderThicknessFunction.apply(fdl.nodes[i])));
 			g.draw(node);
 			
 			g.setFont(labelFontFunction.apply(fdl.nodes[i]));
@@ -123,6 +129,7 @@ public class Renderer<K> {
 			final int strWidth = metrics.stringWidth(nodeLabel);
 			final int strHeight = metrics.getHeight();
 			g.setColor(labelColorFunction.apply(fdl.nodes[i]));
+			//TODO FIXME change font until (and cache results) until size fits
 			g.drawString(nodeLabel,
 					(float) (positions[i].x - fdl.radii[i] * 0.9 + (1.8 * fdl.radii[i] - strWidth) * 0.5),
 					(float) (positions[i].y - strHeight * 0.5 + metrics.getAscent()));
@@ -149,17 +156,17 @@ public class Renderer<K> {
 		image = null;
 	}
 	
-	public void setNodeOpaquenessFunction(Function<K, Double> nodeOpaquenessFunction){
+	/*public void setNodeOpaquenessFunction(Function<K, Float> nodeOpaquenessFunction){
 		this.nodeOpaquenessFunction = nodeOpaquenessFunction;
 		image = null;
-	}
+	}*/
 	
 	public void setEdgeColorFunction(Function<Edge<K>, Color> edgeColorFunction){
 		this.edgeColorFunction = edgeColorFunction;
 		image = null;
 	}
 	
-	public void setEdgeThicknessFunction(Function<Edge<K>, Double> edgeThicknessFunction){
+	public void setEdgeThicknessFunction(Function<Edge<K>, Float> edgeThicknessFunction){
 		this.edgeThicknessFunction = edgeThicknessFunction;
 		image = null;
 	}
@@ -169,7 +176,7 @@ public class Renderer<K> {
 		image = null;
 	}
 	
-	public void setNodeBorderThicknessFunction(Function<K, Double> nodeBorderThicknessFunction){
+	public void setNodeBorderThicknessFunction(Function<K, Float> nodeBorderThicknessFunction){
 		this.nodeBorderThicknessFunction = nodeBorderThicknessFunction;
 		image = null;
 	}

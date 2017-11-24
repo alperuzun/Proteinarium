@@ -145,14 +145,6 @@ public class ForceDirectedLayout<K> {
 		return Math.max(positions[i].distance(positions[j]), 1);
 	}
 	
-	private final double logDistanceFromEdges(int i, int j){
-		assert(i != j);
-		return Math.max(Math.log(distanceFromEdges(i, j)), 1);
-	}
-
-	/*
-	 * Do either log distance or log magnitude to prevent "explosive" repulsion
-	 */
 	private void repel(Point2D.Double delta, int i, int j){
 		final double dist = distanceFromEdges(i, j);//logDistanceFromEdges(i, j);
 		final double magnitude = -repulsionConstant * radii[i] * radii[i] * radii[j] * radii[j] / (dist * dist);
@@ -185,32 +177,7 @@ public class ForceDirectedLayout<K> {
 
 		delta.x += magnitude * Math.cos(degree) / mass;
 		delta.y += magnitude * Math.sin(degree) / mass;
-		
-		if(delta.x == Double.NaN || delta.x == Double.NEGATIVE_INFINITY || delta.x == Double.POSITIVE_INFINITY ||
-				delta.y == Double.NaN || delta.y == Double.NEGATIVE_INFINITY || delta.y == Double.POSITIVE_INFINITY){
-			System.err.println("Why does this shit happen?");
-		}
 	}
-
-	/*public static void main(String...args) throws IOException {
-		final MutableGraph<Integer> g = new MutableGraph<>();
-		final Random random = new Random();
-		final double percentEdgesPresent = 0.2;
-		final int count = 150;
-		for(int i = 0; i < count; i++)
-			g.addNode(i);
-		for(int i = 0; i < count; i++)
-			for(int j = i + 1; j < count; j++)
-				if(random.nextDouble() <= percentEdgesPresent)
-					g.addEdge(i, j);
-
-		final ForceDirectedLayout<Integer> fdl = new ForceDirectedLayout<>(g, 0.01, 0.5, 1);
-		fdl.layout();
-		final Renderer<Integer> r = new Renderer<>(fdl);
-		final File file = new File("image.png");
-		r.saveTo(file);
-		Desktop.getDesktop().open(file);
-	}*/
 
 }
 

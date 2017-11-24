@@ -14,8 +14,6 @@ import java.util.Iterator;
 import java.util.PriorityQueue;
 import java.util.function.Function;
 
-import org.armanious.Tuple;
-
 public class Graph<K> {
 	
 	final HashMap<K, HashSet<Edge<K>>> neighbors = new HashMap<>();
@@ -59,15 +57,15 @@ public class Graph<K> {
 		if(bidirectional) addEdge(new Edge<>(target, src, weight));
 	}
 
-	public final Tuple<ArrayList<Edge<K>>, Integer> dijkstras(K source, K target){
+	public final Path<K> dijkstras(K source, K target){
 		return dijkstras(source, target, e -> e.getWeight());
 	}
 
-	public final Tuple<ArrayList<Edge<K>>, Integer> dijkstras(K source, K target, Function<Edge<K>, Integer> cost){
+	public final Path<K> dijkstras(K source, K target, Function<Edge<K>, Integer> cost){
 		return dijkstras(source, target, cost, Integer.MAX_VALUE, Integer.MAX_VALUE);
 	}
 
-	public final Tuple<ArrayList<Edge<K>>, Integer> dijkstras(K source, K target, Function<Edge<K>, Integer> cost, int maxPathCost, int maxPathLength){
+	public final Path<K> dijkstras(K source, K target, Function<Edge<K>, Integer> cost, int maxPathCost, int maxPathLength){
 		final HashMap<K, Integer> distances = new HashMap<>();
 		final HashMap<K, Integer> lengths = new HashMap<>();
 		final HashMap<K, Edge<K>> prev = new HashMap<>();
@@ -97,7 +95,7 @@ public class Graph<K> {
 				}
 			}
 		}
-
+		
 		ArrayList<Edge<K>> path = new ArrayList<>();
 		Edge<K> cur = prev.get(target);
 		while(cur != null){
@@ -105,7 +103,7 @@ public class Graph<K> {
 			cur = prev.get(cur.getSource());
 		}
 		Collections.reverse(path);
-		return new Tuple<>(path, distances.getOrDefault(target, Integer.MAX_VALUE));
+		return new Path<>(path);
 	}
 
 	@Deprecated

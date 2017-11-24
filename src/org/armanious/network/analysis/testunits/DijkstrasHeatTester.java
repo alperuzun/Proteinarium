@@ -13,6 +13,7 @@ import java.util.Set;
 import org.armanious.Tuple;
 import org.armanious.graph.Edge;
 import org.armanious.graph.HeatGraph;
+import org.armanious.graph.Path;
 import org.armanious.network.analysis.Gene;
 import org.armanious.network.analysis.Protein;
 import org.armanious.network.analysis.ProteinInteractionGraph;
@@ -53,14 +54,13 @@ public class DijkstrasHeatTester {
 		final HashMap<Protein, Integer> counts = new HashMap<>();
 		for(int i = 0; i < proteins.length; i++){
 			for(int j = i + 1; j < proteins.length; j++){
-				final Tuple<ArrayList<Edge<Protein>>, Integer> path = pig.dijkstras(
+				final Path<Protein> path = pig.dijkstras(
 						proteins[i], proteins[j], (e) -> 1000 - e.getWeight());
-				final boolean takingPath = true;//path.val1().size() <= MAX_PATH_LENGTH && path.val2() <= MAX_UNCONFIDENCE;
-
-				final StringBuilder sb = new StringBuilder(takingPath ? "" : "[X] ");
-				sb.append(path.val2()).append(": ");
-				for(Protein p : nodesFromPath(path.val1())){
-					if(takingPath) counts.put(p, counts.getOrDefault(p, 0) + 1);
+				
+				final StringBuilder sb = new StringBuilder();
+				//sb.append(path.val2()).append(": ");
+				for(Protein p : path.getUniqueNodes()){
+					counts.put(p, counts.getOrDefault(p, 0) + 1);
 					sb.append(p.getGene() != null ? p.getGene().getSymbol() : p.getId()).append(',');
 				}
 				System.out.println(sb.substring(0, sb.length() - 1));

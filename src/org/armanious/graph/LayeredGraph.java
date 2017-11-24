@@ -34,7 +34,8 @@ public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
 		setAnnotation(node, count);
 		if(count > maxCount) maxCount = count;
 	}
-
+	
+	//TODO edge-based layered graph
 	public LayeredGraph<K> subtract(LayeredGraph<K> lg){
 		final double lhsSize = getNodes().size();
 		final double rhsSize = lg.getNodes().size();
@@ -43,8 +44,10 @@ public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
 				
 		final LayeredGraph<K> result = new LayeredGraph<>();
 		final HashSet<K> toRetain = new HashSet<>();
+		//TODO FIXME 
 		for(K node : getNodes())
-			if(!lg.getNodes().contains(node) || getCount(node) > lg.getCount(node)) toRetain.add(node);
+			if(!lg.getNodes().contains(node) || lhsFactor * getCount(node) > rhsFactor * (lg.getNodes().contains(node) ? lg.getCount(node) : 0))
+				toRetain.add(node);
 		for(K node : toRetain)
 			for(Edge<K> edge : neighbors.get(node))
 				if(toRetain.contains(edge.getTarget()))
