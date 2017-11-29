@@ -1,8 +1,10 @@
 package org.armanious.network.analysis.testunits;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
@@ -12,18 +14,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.armanious.graph.Edge;
-import org.armanious.graph.Graph;
-import org.armanious.graph.LayeredGraph;
 import org.armanious.io.IOUtils;
-import org.armanious.network.analysis.Entry;
+import org.armanious.network.Configuration;
 import org.armanious.network.analysis.Gene;
-import org.armanious.network.analysis.Protein;
+import org.armanious.network.analysis.NetworkAnalysis;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -53,6 +51,14 @@ public class PTBLiveTest {
 
 	public PTBLiveTest(Reader reader) throws IOException {
 		System.out.println("Parsing VCF file and loading all related SNP data");
+		if(new File("ptbCases.txt").exists() && new File("ptbControls.txt").exists()){
+			columnIndexMap = null;
+			table = null;
+			caseGenes = null;
+			controlGenes = null;
+			reader.close();
+			return;
+		}
 		final BufferedReader br = reader instanceof BufferedReader ? (BufferedReader) reader : new BufferedReader(reader);
 		String s;
 		while((s = br.readLine()) != null && s.startsWith("##"));
@@ -71,7 +77,7 @@ public class PTBLiveTest {
 
 		caseGenes = parseGenes(CASES);
 		controlGenes = parseGenes(CONTROLS);
-		
+
 		final Set<Gene> uniqueGenes = new HashSet<>();
 		int sum = 0;
 		for(Collection<Gene> set : caseGenes.values()){
@@ -184,8 +190,44 @@ public class PTBLiveTest {
 
 	public void run(){
 		try {
-			Entry entry = new Entry(new HashMap<>(), caseGenes, controlGenes);
-			entry.doYourThang("realPtbData");
+			/*Entry entry = new Entry(new HashMap<>(), caseGenes, controlGenes);
+			entry.doYourThang("realPtbData");*/
+			if(caseGenes != null){
+				try(final BufferedWriter bw = new BufferedWriter(new FileWriter("ptbCases.txt"))){
+					for(String key : caseGenes.keySet()){
+						final StringBuilder sb = new StringBuilder(key).append('=');
+						for(Gene g : caseGenes.get(key)){
+							sb.append(g.getSymbol());
+							sb.append(',');
+						}
+						bw.write(sb.substring(0, sb.length() - (caseGenes.get(key).size() > 0 ? 1 : 0)));
+						bw.newLine();
+					}
+				}
+			}
+			if(controlGenes != null){
+				try(final BufferedWriter bw = new BufferedWriter(new FileWriter("ptbControls.txt"))){
+					for(String key : controlGenes.keySet()){
+						final StringBuilder sb = new StringBuilder(key).append('=');
+						for(Gene g : controlGenes.get(key)){
+							sb.append(g.getSymbol());
+							sb.append(',');
+						}
+						bw.write(sb.substring(0, sb.length() - (controlGenes.get(key).size() > 0 ? 1 : 0)));
+						bw.newLine();
+					}
+				}
+			}
+			final Configuration c = Configuration.fromArgs(new String[]{
+					"primaryGeneSetGroupFile=ptbCases.txt",
+					"secondaryGeneSetGroupFile=ptbControls.txt",
+					"maxPathUnconfidence=200",
+					"maxPathLength=5",
+					"percentageOfNodesToRender=0.1",
+					"layoutAndRender=true",
+			});
+			NetworkAnalysis.run(c);
+			System.exit(0);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -200,61 +242,6 @@ public class PTBLiveTest {
 			args[0] += "variants.filtered.snp48pat.vcf";
 		}
 		new PTBLiveTest(args[0]).run();	
-	}
-
-
-	public static void main_(String...args) throws Throwable {
-		Gene.initializeGeneDatabase(new File("/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.aliases.v10.5.hgnc_with_symbol.txt"));
-
-		final Function<String, LayeredGraph<Protein>> graphReader = filename -> {
-			final LayeredGraph<Protein> lg = new LayeredGraph<>();
-			final HashMap<Protein, Double> counts = new HashMap<>();
-			try(final BufferedReader br = new BufferedReader(new FileReader(filename))){
-				String s;
-				while((s = br.readLine()) != null){
-					final String[] parts = s.split("\t");
-					switch(parts.length){
-					case 2:
-						counts.put(Protein.getProtein(parts[0]), Double.parseDouble(parts[1]));
-						break;
-					case 3:
-						lg.addEdge(new Edge<>(Protein.getProtein(parts[0]), Protein.getProtein(parts[1]), Integer.parseInt(parts[2])));
-						break;
-					default:
-						throw new RuntimeException();
-					}
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			for(Protein p : counts.keySet()) lg.setCount(p, counts.get(p));
-			return lg;
-		};
-		String s = "realPtbDataCases";
-		final Entry e = new Entry(new HashMap<>(), new HashMap<>(), new HashMap<>());
-		final LayeredGraph<Protein> graph = graphReader.apply(s + ".txt");
-		//final Collection<Protein> reducedProteinSet = new HashSet<>(Arrays.asList((graph.getNodes().stream().sorted((c1, c2) -> graph.getCount(c2) - graph.getCount(c1)).limit(50).toArray(i -> new Protein[i]))));
-		
-		final LayeredGraph<Protein> reducedGraph = graph;//graph.subgraphWithNodes(new LayeredGraph<>(), reducedProteinSet);
-		
-		
-		final Function<Graph<Protein>, Function<Protein, Double>> sigmoidFunctionGenerator = g -> {
-			final double a = 20.0 / g.getNodes().size();
-			return p -> {
-				final int x = g.getNeighbors(p).size();
-				return 80 * a * x / Math.sqrt(1 + a * a * x * x);
-			};
-		};
-		
-		final Function<Protein, Double> nodeSize = sigmoidFunctionGenerator.apply(reducedGraph);
-		
-		for(Protein protein : reducedGraph.getNodes()){
-			System.out.println((protein.getGene() == null ? protein.getId() : protein.getGene().getSymbol()) + 
-					"\t" + reducedGraph.getNeighbors(protein).size() +
-					"\t" + nodeSize.apply(protein));
-		}
-		e.layoutAndRender(reducedGraph, s + ".png");
-		
 	}
 
 }

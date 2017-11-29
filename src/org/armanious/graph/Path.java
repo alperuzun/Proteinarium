@@ -45,5 +45,10 @@ public class Path<K> {
 	public boolean equals(Object o){
 		return (o instanceof Path) && ((Path<K>)o).path.equals(path);
 	}
+	
+	@Override
+	public int hashCode(){
+		return path.hashCode();
+	}
 
 }

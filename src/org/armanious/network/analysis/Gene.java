@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 
 public class Gene {
@@ -38,8 +39,8 @@ public class Gene {
 		proteins.add(protein);
 	}
 	
-	public Protein[] getProteins(){
-		return proteins.toArray(new Protein[proteins.size()]);
+	public Collection<Protein> getProteins(){
+		return proteins;
 	}
 	
 	public String toString(){

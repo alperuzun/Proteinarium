@@ -29,6 +29,7 @@ public class Graph<K> {
 	}
 	
 	public Collection<Edge<K>> getNeighbors(K n){
+		assert(neighbors.containsKey(n));
 		return neighbors.get(n);
 	}
 
@@ -44,11 +45,15 @@ public class Graph<K> {
 		}
 	}
 	
-	public void addEdge(K src, K target){
+	public void clear(){
+		neighbors.clear();
+	}
+	
+	public final void addEdge(K src, K target){
 		addEdge(src, target, 1);
 	}
 	
-	public void addEdge(K src, K target, int weight){
+	public final void addEdge(K src, K target, int weight){
 		addEdge(src, target, weight, true);
 	}
 	
@@ -58,19 +63,22 @@ public class Graph<K> {
 	}
 
 	public final Path<K> dijkstras(K source, K target){
-		return dijkstras(source, target, e -> e.getWeight());
+		return dijkstras(source, target, e -> (double) e.getWeight());
 	}
 
-	public final Path<K> dijkstras(K source, K target, Function<Edge<K>, Integer> cost){
+	public final Path<K> dijkstras(K source, K target, Function<Edge<K>, Double> cost){
 		return dijkstras(source, target, cost, Integer.MAX_VALUE, Integer.MAX_VALUE);
 	}
-
-	public final Path<K> dijkstras(K source, K target, Function<Edge<K>, Integer> cost, int maxPathCost, int maxPathLength){
-		final HashMap<K, Integer> distances = new HashMap<>();
+	
+	public final Path<K> dijkstras(K source, K target, Function<Edge<K>, Double> cost, double maxPathCost, int maxPathLength){
+		if(!neighbors.containsKey(source) || !neighbors.containsKey(target))
+			return new Path<>();
+		
+		final HashMap<K, Double> distances = new HashMap<>();
 		final HashMap<K, Integer> lengths = new HashMap<>();
 		final HashMap<K, Edge<K>> prev = new HashMap<>();
 
-		distances.put(source, 0);
+		distances.put(source, 0d);
 		lengths.put(source, 1);
 		prev.put(source, null);
 
@@ -79,13 +87,16 @@ public class Graph<K> {
 
 		while(!queue.isEmpty()){
 			final K cur = queue.poll();
-			final int currentCost = distances.get(cur);
+			final double currentCost = distances.get(cur);
 			final int currentLength = lengths.get(cur);
 			if(currentLength == maxPathLength) continue;
+			if(getNeighbors(cur) == null){
+				System.out.println("getNeighbors() for " + cur + " returns null!! :(");
+			}
 			for(Edge<K> edge : getNeighbors(cur)){
 				final K next = edge.getTarget();
-				final int edgeCost = cost.apply(edge);
-				if(currentCost + edgeCost < distances.getOrDefault(next, Integer.MAX_VALUE)
+				final double edgeCost = cost.apply(edge);
+				if(currentCost + edgeCost < distances.getOrDefault(next, Double.MAX_VALUE)
 						&& currentCost + edgeCost <= maxPathCost){
 					distances.put(next, currentCost + edgeCost);
 					lengths.put(next, currentLength + 1);
@@ -98,6 +109,7 @@ public class Graph<K> {
 		
 		ArrayList<Edge<K>> path = new ArrayList<>();
 		Edge<K> cur = prev.get(target);
+		
 		while(cur != null){
 			path.add(cur);
 			cur = prev.get(cur.getSource());
