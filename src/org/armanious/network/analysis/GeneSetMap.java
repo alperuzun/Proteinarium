@@ -20,7 +20,6 @@ import org.armanious.graph.Path;
 public class GeneSetMap {
 	
 	private final Map<String, GeneSet> geneSetMap;
-	private final LayeredGraph<Protein> graph;
 	private final Set<Gene> uniqueGenes;
 	private final Set<Protein> uniqueProteins;
 	
@@ -30,7 +29,6 @@ public class GeneSetMap {
 	
 	public GeneSetMap(Map<String, ? extends Collection<String>> map){
 		geneSetMap = new HashMap<>();
-		graph = new LayeredGraph<>();
 		uniqueGenes = new HashSet<>();
 		uniqueProteins = new HashSet<>();
 		for(String id : map.keySet()){
@@ -45,7 +43,6 @@ public class GeneSetMap {
 		assert(genesInCollection);
 		
 		geneSetMap = new HashMap<>();
-		graph = new LayeredGraph<>();
 		uniqueGenes = new HashSet<>();
 		uniqueProteins = new HashSet<>();
 		for(String id : map.keySet()){
@@ -57,11 +54,8 @@ public class GeneSetMap {
 	}
 	
 	public void computePairwisePathsAndGraph(Function<Tuple<Protein, Protein>, Path<Protein>> pairwisePathInitializer){
-		graph.clear();
-		for(GeneSet geneSet : geneSetMap.values()){
+		for(GeneSet geneSet : geneSetMap.values())
 			geneSet.computePairwisePathsAndGraph(pairwisePathInitializer);
-			graph.addGraph(geneSet.getGraph());
-		}
 	}
 	
 	public Map<String, GeneSet> getGeneSetMap(){
@@ -69,6 +63,23 @@ public class GeneSetMap {
 	}
 	
 	public LayeredGraph<Protein> getLayeredGraph(){
+		return getLayeredGraph(geneSetMap.keySet());
+	}
+	
+	private static String tmp(Collection<Protein> coll){
+		final StringBuilder sb = new StringBuilder();
+		for(Protein c : coll){
+			sb.append(c.getGene() != null ? c.getGene().getSymbol() : c.getId()).append(", ");
+		}
+		return sb.toString();
+	}
+	
+	public LayeredGraph<Protein> getLayeredGraph(Collection<String> geneSetIdentifiers){
+		final LayeredGraph<Protein> graph = new LayeredGraph<>();
+		for(String id : geneSetIdentifiers){
+			System.out.println("Adding graph of " + id + " to the layered graph: " + tmp(geneSetMap.get(id).getGraph().getNodes()));
+			graph.addGraph(geneSetMap.get(id).getGraph());
+		}
 		return graph;
 	}
 	
@@ -78,6 +89,17 @@ public class GeneSetMap {
 	
 	public Set<Protein> getUniqueProteins(){
 		return uniqueProteins;
+	}
+	
+	public GeneSetMap subset(Collection<String> keys){
+		final GeneSetMap gsm = new GeneSetMap();
+		for(String key : keys){
+			GeneSet gs = geneSetMap.get(key);
+			gsm.uniqueGenes.addAll(gs.getGenes());
+			gsm.uniqueProteins.addAll(gs.getProteins());
+			gsm.geneSetMap.put(key, gs);
+		}
+		return gsm;
 	}
 	
 	public static GeneSetMap loadFromFile(String geneSetGroupFile) throws IOException {

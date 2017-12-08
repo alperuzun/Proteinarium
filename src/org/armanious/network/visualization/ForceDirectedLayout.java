@@ -121,8 +121,11 @@ public class ForceDirectedLayout<K> {
 			for(int i = 0; i < nodes.length; i++){
 				map.put(nodes[i], i);
 				final Point2D.Double pos = new Point2D.Double(
-						random.nextGaussian() * nodes.length,
-						random.nextGaussian() * nodes.length);
+						Math.cos(Math.PI / 8 * i) * i,
+						Math.sin(Math.PI / 8 * i) * i
+						/*random.nextGaussian() * nodes.length,
+						random.nextGaussian() * nodes.length*/
+						);
 				positions[i] = pos;
 				radii[i] = nodeSizeFunction.apply(nodes[i]);
 				assert(radii[i] >= 1);

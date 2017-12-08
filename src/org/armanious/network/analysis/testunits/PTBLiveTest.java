@@ -222,8 +222,9 @@ public class PTBLiveTest {
 					"primaryGeneSetGroupFile=ptbCases.txt",
 					"secondaryGeneSetGroupFile=ptbControls.txt",
 					"maxPathUnconfidence=200",
-					"maxPathLength=5",
-					"percentageOfNodesToRender=0.1",
+					"maxPathLength=3",
+					"percentageOfNodesToRender=1",
+					"maxNodesInGraphToRender=50",
 					"layoutAndRender=true",
 			});
 			NetworkAnalysis.run(c);
@@ -242,6 +243,21 @@ public class PTBLiveTest {
 			args[0] += "variants.filtered.snp48pat.vcf";
 		}
 		new PTBLiveTest(args[0]).run();	
+	}
+	
+	public static void main_(String...args) throws IOException{
+		Gene.initializeGeneDatabase(new File("/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.aliases.v10.5.hgnc_with_symbol.txt"));
+		final Configuration c = Configuration.fromArgs(new String[]{
+				"primaryGeneSetGroupFile=ptbCases.txt",
+				"secondaryGeneSetGroupFile=ptbControls.txt",
+				"maxPathUnconfidence=200",
+				"maxPathLength=3",
+				"percentageOfNodesToRender=1",
+				"maxNodesInGraphToRender=50",
+				"layoutAndRender=true",
+		});
+		NetworkAnalysis.run(c);
+		System.exit(0);
 	}
 
 }

@@ -21,7 +21,7 @@ public final class Configuration {
 		
 		public final boolean verboseOutput;
 		
-		public final boolean multiThreaded = false;
+		// public final boolean multiThreaded = false;
 		
 		public GeneralConfig(Map<String, String> map){
 			primaryGeneSetGroupFile = map.get("primaryGeneSetGroupFile");
@@ -102,6 +102,8 @@ public final class Configuration {
 		public final boolean varyNodeAlphaValues;
 		public final boolean varyEdgeAlphaValues;
 		
+		public final String imageDirectory;
+		
 		public RendererConfig(Map<String, String> map){
 			transparentBackground = Boolean.parseBoolean(map.getOrDefault("transparentBackground", "true"));
 			imageExtension = map.getOrDefault("imageExtension", "png");
@@ -117,6 +119,7 @@ public final class Configuration {
 			varyNodeAlphaValues = Boolean.parseBoolean(map.getOrDefault("varyNodeAlphaValues", "true"));
 			varyEdgeAlphaValues = Boolean.parseBoolean(map.getOrDefault("varyEdgeAlphaValues", "true"));
 			
+			imageDirectory = map.getOrDefault("imageDirectory", "images");
 		}
 		
 	}
@@ -153,7 +156,7 @@ public final class Configuration {
 			}
 		}
 		for(String key : keySetCopy)
-			System.err.println("Warning: uknown parameter " + key + " provided.");
+			System.err.println("Warning: unknown parameter " + key + " provided.");
 	}
 	
 	public static Configuration defaultConfiguration(){

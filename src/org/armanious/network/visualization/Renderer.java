@@ -11,6 +11,7 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.function.Function;
@@ -124,9 +125,12 @@ public class Renderer<K> {
 		//System.out.println("Attempting to create buffered image with width=" + width + ", height=" + height);
 		final BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		final Graphics2D g = image.createGraphics();
-		g.setRenderingHints(new RenderingHints(
-				RenderingHints.KEY_ANTIALIASING,
-				RenderingHints.VALUE_ANTIALIAS_ON));
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+				RenderingHints.VALUE_ANTIALIAS_ON);
+		g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+				RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		g.setRenderingHint(RenderingHints.KEY_RENDERING,
+				RenderingHints.VALUE_RENDER_QUALITY);
 		
 		g.setColor(BACKGROUND_COLOR);
 		if(rc.transparentBackground) g.setComposite(AlphaComposite.Clear);
@@ -179,7 +183,12 @@ public class Renderer<K> {
 	public void handleLayoutFinal(GraphLayoutData<K> data, String name) throws IOException {
 		System.out.println("Generating image of " + name + " for output to file...");
 		final BufferedImage image = generateBufferedImage(data);
-		final BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(name + "." + rc.imageExtension));
+		
+		final File imageDirectory = new File(rc.imageDirectory);
+		if(!imageDirectory.exists()) imageDirectory.mkdirs();
+		final File imageFile = new File(imageDirectory, name + "." + rc.imageExtension);
+		
+		final BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(imageFile));
 		ImageIO.write(image, rc.imageExtension, bos);
 	}
 

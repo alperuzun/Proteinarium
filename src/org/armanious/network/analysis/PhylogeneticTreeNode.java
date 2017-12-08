@@ -5,21 +5,21 @@ import java.util.List;
 
 public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNode> {
 	
-	private final List<String> childLabels = new LinkedList<>();
+	private final List<PhylogeneticTreeNode> leaves = new LinkedList<>();
 	
 	private final String label;
-	private final int weight;
+	private final double weight;
 	private final double depth;
 	
 	private PhylogeneticTreeNode parent;
 	private PhylogeneticTreeNode left;
 	private PhylogeneticTreeNode right;
 	
-	public PhylogeneticTreeNode(String label, int weight){
+	public PhylogeneticTreeNode(String label, double weight){
 		this(label, weight, 0);
 	}
 	
-	public PhylogeneticTreeNode(String label, int weight, double depth){
+	public PhylogeneticTreeNode(String label, double weight, double depth){
 		if(label == null) throw new IllegalArgumentException("Label must not be null");
 		this.label = label;
 		this.weight = weight;
@@ -34,7 +34,7 @@ public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNo
 		return label;
 	}
 	
-	public int getWeight(){
+	public double getWeight(){
 		return weight;
 	}
 	
@@ -58,8 +58,8 @@ public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNo
 		return o != null && o instanceof PhylogeneticTreeNode && ((PhylogeneticTreeNode)o).label.equals(label);
 	}
 	
-	public String[] getChildLabels(){
-		return childLabels.toArray(new String[childLabels.size()]);
+	public PhylogeneticTreeNode[] getLeaves(){
+		return leaves.toArray(new PhylogeneticTreeNode[leaves.size()]);
 	}
 	
 	public int hashCode(){
@@ -77,14 +77,14 @@ public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNo
 	}
 
 	public void setChildren(PhylogeneticTreeNode left, PhylogeneticTreeNode right){
-		if(left.getWeight() == 1)
-			childLabels.add(left.label);
+		if(left.leaves.isEmpty())
+			leaves.add(left);
 		else
-			childLabels.addAll(left.childLabels);
-		if(right.getWeight() == 1)
-			childLabels.add(right.label);
+			leaves.addAll(left.leaves);
+		if(right.leaves.isEmpty())
+			leaves.add(right);
 		else
-			childLabels.addAll(right.childLabels);
+			leaves.addAll(right.leaves);
 		this.left = left;
 		this.right = right;
 		left.setParent(this);

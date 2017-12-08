@@ -1,5 +1,6 @@
 package org.armanious.network.analysis;
 
+import java.util.Collections;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -51,7 +52,7 @@ public class DistanceMatrix<T extends Comparable<T>> {
 		}
 		return matrix.get(lower).get(upper);
 	}
-
+	
 	public Tuple<T, T> getMinimumDistanceEntry() {
 		T minA = null;
 		T minB = null;
@@ -83,7 +84,7 @@ public class DistanceMatrix<T extends Comparable<T>> {
 			t.add(matrix.firstEntry().getValue().lastKey());
 			return t;
 		}else{
-			return new TreeSet<>();
+			return Collections.emptySet();
 		}
 	}
 
