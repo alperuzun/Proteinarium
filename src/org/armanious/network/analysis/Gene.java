@@ -86,7 +86,11 @@ public class Gene {
 		return arr;
 	}
 	
-	public static void initializeGeneDatabase(File f) throws IOException {
+	private static void initializeGeneDatabase() {
+		String urlforversion = "view-source:https://string-db.org/";
+		String urllinks = "https://stringdb-static.org/download/protein.links.v" + version + "/9606.protein.links.v10.5.txt.gz";
+		String urlaliases = "https://stringdb-static.org/download/protein.aliases.v" + version + "/9606.protein.aliases.v10.5.txt.gz";
+		//parse for in parts[2] "BLAST_KEGG_NAME"
 		initializeGeneDatabase(new FileReader(f));
 	}
 	
@@ -110,6 +114,12 @@ public class Gene {
 			gene.addProtein(new Protein(parts[0], gene));
 		}
 		System.out.println("finished");
+	}
+
+	public static boolean loadedGene(String gene) {
+		if(genesById == null)
+			throw new IllegalStateException("Gene database not yet initialized");
+		return genesBySymbol.containsKey(gene);
 	}
 
 }

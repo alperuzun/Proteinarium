@@ -27,6 +27,7 @@ public class Renderer<K> {
 	private static final Color BACKGROUND_COLOR = new Color(225, 225, 225);
 
 	private final RendererConfig rc;
+	private final File imageDirectory;
 
 	private Function<K, String> labelFunction = k -> String.valueOf(k);
 	private Function<K, Color> labelColorFunction = k -> Color.BLACK;
@@ -40,7 +41,9 @@ public class Renderer<K> {
 	private Function<K, Color> nodeBorderColorFunction = k -> Color.BLACK;
 	private Function<K, Float> nodeBorderThicknessFunction = k -> 1f;
 
-	public Renderer(RendererConfig rc){
+	public Renderer(RendererConfig rc, File imageDirectory){
+		this.imageDirectory = imageDirectory;
+		if(!imageDirectory.exists()) imageDirectory.mkdirs();
 		this.rc = rc;
 	}
 
@@ -184,8 +187,6 @@ public class Renderer<K> {
 		System.out.println("Generating image of " + name + " for output to file...");
 		final BufferedImage image = generateBufferedImage(data);
 		
-		final File imageDirectory = new File(rc.imageDirectory);
-		if(!imageDirectory.exists()) imageDirectory.mkdirs();
 		final File imageFile = new File(imageDirectory, name + "." + rc.imageExtension);
 		
 		final BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(imageFile));

@@ -30,11 +30,13 @@ import org.armanious.network.analysis.PhylogeneticTreeNode;
 public class DendrogramRenderer {
 
 	private final RendererConfig rc;
+	private final File imageDirectory;
 	
 	private Function<PhylogeneticTreeNode, Color> clusterEdgeColorFunction = c -> Color.BLACK;
 
-	public DendrogramRenderer(RendererConfig rc){
+	public DendrogramRenderer(RendererConfig rc, File imageDirectory){
 		this.rc = rc;
+		this.imageDirectory = imageDirectory;
 	}
 	
 	public void setClusterEdgeColorFunction(Function<PhylogeneticTreeNode, Color> clusterEdgeColorFunction){
@@ -174,7 +176,6 @@ public class DendrogramRenderer {
 		System.out.println("Generating image of " + name + " for output to file...");
 		final Tuple<BufferedImage, Map<String, PhylogeneticTreeNode>> imageAndMapping = generateBufferedImageAndMapping(root);
 		
-		final File imageDirectory = new File(rc.imageDirectory);
 		if(!imageDirectory.exists()) imageDirectory.mkdirs();
 		final File imageFile = new File(imageDirectory, name + "." + rc.imageExtension);
 		

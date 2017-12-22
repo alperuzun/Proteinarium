@@ -18,6 +18,9 @@ public class DistanceMatrix<T extends Comparable<T>> {
 	}
 
 	public void setDistance(T a, T b, double d){
+		if(!Double.isFinite(d))
+			throw new IllegalArgumentException("Only finite distances allowed");
+		
 		final T lower;
 		final T upper;
 		if(a.compareTo(b) < 0){
@@ -68,6 +71,8 @@ public class DistanceMatrix<T extends Comparable<T>> {
 				}
 			}
 		}
+		if(!(minA != null && minB != null))
+			System.err.println("DEBUG");
 		return new Tuple<>(minA, minB);
 	}
 

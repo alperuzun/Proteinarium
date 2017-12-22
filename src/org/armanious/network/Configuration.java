@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -14,6 +13,9 @@ import java.util.Set;
 public final class Configuration {
 	
 	public static final class GeneralConfig {
+
+		public final String activeDirectory;
+		public final String imageDirectory;
 		
 		public final String primaryGeneSetGroupFile;
 		public final String secondaryGeneSetGroupFile;
@@ -25,12 +27,33 @@ public final class Configuration {
 		
 		public GeneralConfig(Map<String, String> map){
 			primaryGeneSetGroupFile = map.get("primaryGeneSetGroupFile");
-			if(primaryGeneSetGroupFile == null)
-				throw new RuntimeException("Must at least supply cases gene set file in configuration.");
-			secondaryGeneSetGroupFile = map.get("secondaryGeneSetGroupFile");
-			projectName = map.getOrDefault("projectName", primaryGeneSetGroupFile.contains(".") ? primaryGeneSetGroupFile.substring(0, primaryGeneSetGroupFile.indexOf('.')) : primaryGeneSetGroupFile);
-			verboseOutput = Boolean.parseBoolean(map.getOrDefault("verboseOutput", "false"));
+			//if(primaryGeneSetGroupFile == null)
+				//throw new RuntimeException("Must at least supply cases gene set file in configuration.");
 			
+			String activeDirectory = map.getOrDefault("activeDirectory", "");
+			if(!activeDirectory.isEmpty() && !activeDirectory.endsWith(File.separator))
+				activeDirectory += File.separator;
+			this.activeDirectory = activeDirectory;
+			
+			String imageDirectory = map.getOrDefault("imageDirectory", activeDirectory + "images");
+			if(!imageDirectory.isEmpty() && !imageDirectory.endsWith(File.separator))
+				imageDirectory += File.separator;
+			this.imageDirectory = imageDirectory;
+			
+			
+			secondaryGeneSetGroupFile = map.get("secondaryGeneSetGroupFile");
+			String projectName = map.get("projectName");
+			if(projectName == null){
+				if(!activeDirectory.isEmpty()){
+					projectName = activeDirectory;
+				}else if(primaryGeneSetGroupFile != null){
+					projectName = primaryGeneSetGroupFile.contains(".") ? primaryGeneSetGroupFile.substring(0, primaryGeneSetGroupFile.indexOf('.')) : primaryGeneSetGroupFile;
+				}
+			}
+			this.projectName = projectName;
+			
+			verboseOutput = Boolean.parseBoolean(map.getOrDefault("verboseOutput", "false"));
+
 			//multiThreaded = Boolean.parseBoolean(map.getOrDefault("multiThreaded", "false"));
 		}
 
@@ -67,6 +90,7 @@ public final class Configuration {
 		public final double repulsionConstant;
 		public final double attractionConstant;
 		public final double deltaThreshold;
+		
 		public final long maxIterations;
 		public final long maxTime;
 		
@@ -74,10 +98,10 @@ public final class Configuration {
 		public final double maxNodeSize;
 		
 		public ForceDirectedLayoutConfig(Map<String, String> map){
-			repulsionConstant = Double.parseDouble(map.getOrDefault("repulsionConstant", "0.15"));
-			attractionConstant = Double.parseDouble(map.getOrDefault("attractionConstant", "0.01"));
+			repulsionConstant = Double.parseDouble(map.getOrDefault("repulsionConstant", "0.5"));
+			attractionConstant = Double.parseDouble(map.getOrDefault("attractionConstant", "0.001"));
 			deltaThreshold = Double.parseDouble(map.getOrDefault("deltaThreshold", "0.001"));
-			maxIterations = Long.parseLong(map.getOrDefault("maxIterations", "5000"));
+			maxIterations = Long.parseLong(map.getOrDefault("maxIterations", "10000"));
 			maxTime = Long.parseLong(map.getOrDefault("maxTime", String.valueOf(Long.MAX_VALUE)));
 
 			minNodeSize = Double.parseDouble(map.getOrDefault("minNodeSize", "15"));
@@ -94,6 +118,9 @@ public final class Configuration {
 		public final String fontName;
 		public final int fontSize;
 		public final boolean dynamicallySizedFont = false;
+		
+		public final int minNodeAlpha;
+		public final int minEdgeAlpha;
 
 		public final String defaultNodeColor;
 		public final String primaryGroupNodeColor;
@@ -101,8 +128,6 @@ public final class Configuration {
 		public final String bothGroupsNodeColor;
 		public final boolean varyNodeAlphaValues;
 		public final boolean varyEdgeAlphaValues;
-		
-		public final String imageDirectory;
 		
 		public RendererConfig(Map<String, String> map){
 			transparentBackground = Boolean.parseBoolean(map.getOrDefault("transparentBackground", "true"));
@@ -112,6 +137,10 @@ public final class Configuration {
 			fontSize = Integer.parseInt(map.getOrDefault("fontSize", "12"));
 			//dynamicallySizedFont = Boolean.parseBoolean(map.getOrDefault("dynamicallySizedFont", "false"));
 			
+
+			minNodeAlpha = Integer.parseInt(map.getOrDefault("minNodeAlpha", "50"));
+			minEdgeAlpha = Integer.parseInt(map.getOrDefault("minEdgeAlpha", "50"));
+			
 			defaultNodeColor = map.getOrDefault("primaryGroupNodeColor", "(255,0,0)");
 			primaryGroupNodeColor = map.getOrDefault("primaryGroupNodeColor", "(255,255,0)");
 			secondaryGroupNodeColor = map.getOrDefault("secondaryGroupNodeColor", "(0,255,0)");
@@ -119,7 +148,6 @@ public final class Configuration {
 			varyNodeAlphaValues = Boolean.parseBoolean(map.getOrDefault("varyNodeAlphaValues", "true"));
 			varyEdgeAlphaValues = Boolean.parseBoolean(map.getOrDefault("varyEdgeAlphaValues", "true"));
 			
-			imageDirectory = map.getOrDefault("imageDirectory", "images");
 		}
 		
 	}
@@ -159,8 +187,8 @@ public final class Configuration {
 			System.err.println("Warning: unknown parameter " + key + " provided.");
 	}
 	
-	public static Configuration defaultConfiguration(){
-		return fromMap(Collections.emptyMap());
+	public static Configuration defaultConfiguration(String primaryGeneSetGroupFile){
+		return fromArgs("primaryGeneSetGroupFile=" + primaryGeneSetGroupFile);
 	}
 	
 	public static Configuration fromFile(File file) throws IOException {
@@ -181,7 +209,7 @@ public final class Configuration {
 		}
 	}
 	
-	public static Configuration fromArgs(String[] args){
+	public static Configuration fromArgs(String...args){
 		final Map<String, String> map = new HashMap<>();
 		for(String arg : args){
 			final int idx = arg.indexOf('=');

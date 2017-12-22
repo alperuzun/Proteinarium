@@ -72,19 +72,20 @@ public class ForceDirectedLayout<K> {
 		
 	}
 	
-	private static <K> double distanceFromEdges(GraphLayoutData<K> data, int i, int j){
+	private double distanceFromCenters(GraphLayoutData<K> data, int i, int j){
 		assert(i != j);
-		return Math.max(data.positions[i].distance(data.positions[j]), 1);
+		return data.positions[i].distance(data.positions[j]);
 	}
 	
 	private void repel(GraphLayoutData<K> data, Point2D.Double delta, int i, int j){
-		final double dist = distanceFromEdges(data, i, j);//logDistanceFromEdges(i, j);
-		final double magnitude = -fdlc.repulsionConstant * data.radii[i] * data.radii[i] * data.radii[j] * data.radii[j] / (dist * dist);
+		final double dist = distanceFromCenters(data, i, j);
+		final double magnitude = -fdlc.repulsionConstant * data.radii[i] * data.radii[j] / (dist * dist);
+		
 		calculateOffset(data, magnitude, delta, i, j);
 	}
 
 	private void attract(GraphLayoutData<K> data, Point2D.Double delta, int i, int j){
-		final double dist = distanceFromEdges(data, i, j);
+		final double dist = distanceFromCenters(data, i, j);
 		final double magnitude = fdlc.attractionConstant * dist;
 		calculateOffset(data, magnitude, delta, i, j);
 	}
@@ -94,16 +95,16 @@ public class ForceDirectedLayout<K> {
 		final double dy = data.positions[j].y - data.positions[i].y;
 		final double degree = Math.atan2(dy, dx);
 
-		final double mass = data.radii[i] * data.radii[i];
-
-		delta.x += magnitude * Math.cos(degree) / mass;
-		delta.y += magnitude * Math.sin(degree) / mass;
+		delta.x += magnitude * Math.cos(degree);
+		delta.y += magnitude * Math.sin(degree);
+		
 	}
 	
 	protected static class GraphLayoutData<K> { 
 		
 		public final K[] nodes;
 		public final int[][] neighbors;
+		public final int maxDegree;
 		public final Edge<K>[][] edges;
 		public final double[] radii;
 		public Point2D.Double[] positions;
@@ -130,7 +131,7 @@ public class ForceDirectedLayout<K> {
 				radii[i] = nodeSizeFunction.apply(nodes[i]);
 				assert(radii[i] >= 1);
 			}
-
+			int maxDegree = 0;
 			for(int i = 0; i < nodes.length; i++){
 				final Collection<Edge<K>> edges = g.getNeighbors(nodes[i]);
 				final ArrayList<Edge<K>> edgesList = edges instanceof ArrayList ? (ArrayList<Edge<K>>) edges : new ArrayList<>(edges);
@@ -138,9 +139,12 @@ public class ForceDirectedLayout<K> {
 				for(int j = 0; j < edgesList.size(); j++){
 					n[j] = map.get(edgesList.get(j).getTarget());
 				}
+				//Arrays.sort(n);
 				neighbors[i] = n;
+				if(n.length > maxDegree) maxDegree = n.length;
 				this.edges[i] = edgesList.toArray(new Edge[edgesList.size()]);
 			}
+			this.maxDegree = maxDegree;
 		}
 		
 	}

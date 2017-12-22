@@ -1,6 +1,5 @@
 package org.armanious.network.analysis;
 
-import java.util.List;
 import java.util.Set;
 
 import org.armanious.Tuple;

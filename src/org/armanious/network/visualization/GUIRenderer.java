@@ -5,6 +5,7 @@ import java.awt.Image;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,12 +23,12 @@ public class GUIRenderer<K> extends Renderer<K> {
 	
 	private int iteration;
 
-	public GUIRenderer(RendererConfig rc) {
-		this(rc, 20);
+	public GUIRenderer(RendererConfig rc, File imageDirectory) {
+		this(rc, imageDirectory, 20);
 	}
 	
-	public GUIRenderer(RendererConfig rc, int skipIterations){
-		super(rc);
+	public GUIRenderer(RendererConfig rc, File imageDirectory, int skipIterations){
+		super(rc, imageDirectory);
 		this.skipIterations = skipIterations;
 		iteration = skipIterations;
 	}

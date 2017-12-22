@@ -76,10 +76,8 @@ public class GeneSetMap {
 	
 	public LayeredGraph<Protein> getLayeredGraph(Collection<String> geneSetIdentifiers){
 		final LayeredGraph<Protein> graph = new LayeredGraph<>();
-		for(String id : geneSetIdentifiers){
-			System.out.println("Adding graph of " + id + " to the layered graph: " + tmp(geneSetMap.get(id).getGraph().getNodes()));
+		for(String id : geneSetIdentifiers)
 			graph.addGraph(geneSetMap.get(id).getGraph());
-		}
 		return graph;
 	}
 	

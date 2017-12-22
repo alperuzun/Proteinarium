@@ -40,7 +40,14 @@ public final class NetworkAnalysis {
 		// load gene sets
 		GeneSetMap primary = GeneSetMap.loadFromFile(c.generalConfig.primaryGeneSetGroupFile);
 		GeneSetMap secondary = c.generalConfig.secondaryGeneSetGroupFile != null ? GeneSetMap.loadFromFile(c.generalConfig.secondaryGeneSetGroupFile) : null;
-
+		run(c, primary, secondary);
+	}
+	
+	public static void run(Configuration c, GeneSetMap primary) throws IOException {
+		run(c, primary, null);
+	}
+	
+	public static void run(Configuration c, GeneSetMap primary, GeneSetMap secondary) throws IOException {
 		if(secondary != null){
 			for(String primaryKey : primary.getGeneSetMap().keySet()){
 				if(secondary.getGeneSetMap().keySet().contains(primaryKey)){
@@ -56,12 +63,6 @@ public final class NetworkAnalysis {
 
 		// UPGMA
 		performClusterAnalysis(c, primary, secondary);
-
-
-		// Layout and render
-		// TODO refactor code based on cluster analysis flow
-		// if(c.analysisConfig.layoutAndRender) layoutAndRender(c, primary, secondary);
-
 	}
 
 
@@ -90,10 +91,16 @@ public final class NetworkAnalysis {
 		byTargets.put(target, path);
 	}
 
-	private static void savePaths(File file, Map<Protein, Map<Protein, Path<Protein>>> map) throws IOException {
+	private static void savePaths(Configuration c, File file, Map<Protein, Map<Protein, Path<Protein>>> map) throws IOException {
 		int saved = 0;
 		//final Set<Tuple<Protein, Protein>> checked = new HashSet<>();
 		try(final BufferedWriter bw = new BufferedWriter(new FileWriter(file))){
+			
+			bw.write(c.proteinInteractomeConfig.STRINGversion); bw.newLine();
+			bw.write(String.valueOf(c.proteinInteractomeConfig.minConfidence)); bw.newLine();
+			bw.write(String.valueOf(c.analysisConfig.maxPathLength)); bw.newLine();
+			bw.write(String.valueOf(c.analysisConfig.maxPathUnconfidence)); bw.newLine();
+			
 			for(Protein src : map.keySet()){
 				final Map<Protein, Path<Protein>> byTarget = map.get(src);
 				for(Protein target : byTarget.keySet()){
@@ -123,10 +130,24 @@ public final class NetworkAnalysis {
 		System.out.println("Saved " + saved + " paths");
 	}
 
-	private static void loadPaths(File file, Map<Protein, Map<Protein, Path<Protein>>> map) throws IOException {
+	private static void loadPaths(Configuration c, File file, Map<Protein, Map<Protein, Path<Protein>>> map) throws IOException {
 		try(final BufferedReader br = new BufferedReader(new FileReader(file))){
 			int count = 0;
 			String s;
+			
+			final String version = br.readLine();
+			final double minConfidence = Double.parseDouble(br.readLine());
+			final int maxPathLength = Integer.parseInt(br.readLine());
+			final double maxPathUnconfidence = Double.parseDouble(br.readLine());
+			
+			if(!version.equals(c.proteinInteractomeConfig.STRINGversion)
+					|| minConfidence != c.proteinInteractomeConfig.minConfidence
+					|| maxPathLength != c.analysisConfig.maxPathLength
+					|| maxPathUnconfidence != c.analysisConfig.maxPathUnconfidence){
+				System.out.println("Old data outdated: need to recompute everything.");
+				return;
+			}
+			
 			while((s = br.readLine()) != null){
 				count++;
 				final String[] parts = s.split(",");
@@ -160,10 +181,10 @@ public final class NetworkAnalysis {
 	private static int hits;
 	private static int misses;
 	private static void computeAndSaveSetGraphs(Configuration c, GeneSetMap primary, GeneSetMap secondary) throws IOException {
-		final File dataFile = new File(c.generalConfig.projectName + PROJECT_DATA_SUFFIX);
+		final File dataFile = new File(c.generalConfig.activeDirectory + c.generalConfig.projectName + PROJECT_DATA_SUFFIX);
 		final Map<Protein, Map<Protein, Path<Protein>>> precomputedPaths = new HashMap<>();
 		if(c.analysisConfig.reusePreviousData && dataFile.exists())
-			loadPaths(dataFile, precomputedPaths);
+			loadPaths(c, dataFile, precomputedPaths);
 
 		// load protein interactome TODO load lazily
 		ProteinInteractionGraph pig = new ProteinInteractionGraph(c.proteinInteractomeConfig, c.analysisConfig.maxPathUnconfidence);
@@ -172,7 +193,7 @@ public final class NetworkAnalysis {
 			Path<Protein> path = precomputedPaths.getOrDefault(t.val1(), Collections.emptyMap()).get(t.val2());
 			if(path == null){
 				misses++;
-				System.out.println(t.val1().getId() + "," + t.val2().getId());
+				//System.out.println(t.val1().getId() + "," + t.val2().getId());
 				path = pig.dijkstras(t.val1(), t.val2(), e -> 1000D - e.getWeight(),
 						c.analysisConfig.maxPathUnconfidence,
 						c.analysisConfig.maxPathLength);
@@ -206,23 +227,23 @@ public final class NetworkAnalysis {
 		System.out.println(hits + " path cache hits.");
 		System.out.println(misses + " path cache misses.");
 		System.out.println((double) hits / (hits + misses) + " proportion of paths cached.");
-		savePaths(dataFile, precomputedPaths);
+		savePaths(c, dataFile, precomputedPaths);
 	}
 
 	private static <K> LayeredGraph<K> reduceLayeredGraph(LayeredGraph<K> g, Configuration c){
-		System.out.println("Original graph size: " + g.getNodes().size());
+		//System.out.println("Original graph size: " + g.getNodes().size());
 		final ArrayList<Tuple<K, Integer>> degree = new ArrayList<>();
 		for(K k : g.getNodes()) degree.add(new Tuple<>(k, g.getNeighbors(k).size()));
 		degree.sort(Comparator.comparingInt(t -> -t.val2()));
 		final int toRetainCount = (int) Math.ceil(Math.min(c.analysisConfig.percentageOfNodesToRender * degree.size(), c.analysisConfig.maxNodesInGraphToRender));
 		final Set<K> toRetain = new HashSet<>();
 		for(int i = 0; i < toRetainCount; i++) toRetain.add(degree.get(i).val1());
-		System.out.println("Reduced graph size: " + toRetain.size());
+		//System.out.println("Reduced graph size: " + toRetain.size());
 		return g.subgraphWithNodes(new LayeredGraph<>(), toRetain);
 	}
 
 	private static Color parseColorOrDefault(String s, Color defaultColor){
-		if(s == null) return defaultColor;
+		if(s == null || s.isEmpty() || s.equalsIgnoreCase("null")) return defaultColor;
 		assert(s.charAt(0) == '(' && s.charAt(s.length() - 1) == ')');
 		final String[] parts = s.substring(1, s.length() - 1).split(",");
 		return new Color(Integer.parseInt(parts[0]),
@@ -247,17 +268,16 @@ public final class NetworkAnalysis {
 		final Color primaryColor = parseColorOrDefault(c.rendererConfig.primaryGroupNodeColor, defaultColor);
 		
 		final Color secondaryColor = parseColorOrDefault(c.rendererConfig.secondaryGroupNodeColor, defaultColor);
-		final Color mixedColor = Color.BLUE;
-				//parseColorOrDefault(c.rendererConfig.bothGroupsNodeColor, mixColors(primaryColor, secondaryColor));
+		final Color mixedColor = parseColorOrDefault(c.rendererConfig.bothGroupsNodeColor, mixColors(primaryColor, secondaryColor));
 		
 		
 		//System.out.println(mixedColor);
 		
 		if(c.rendererConfig.varyNodeAlphaValues){
-			final int LOWER_ALPHA_BOUND = 50;
+			final int LOWER_ALPHA_BOUND = c.rendererConfig.minNodeAlpha;
 			final int UPPER_ALPHA_BOUND = 255;
 			final double MAXIMUM_NUM = graph.getMaxCount();
-			System.out.println("Max count of graph: " + MAXIMUM_NUM);
+			//System.out.println("Max count of graph: " + MAXIMUM_NUM);
 			return p -> {
 				final boolean isPrimary = primary.getUniqueProteins().contains(p);
 				final boolean isSecondary = secondary != null && secondary.getUniqueProteins().contains(p);
@@ -286,16 +306,16 @@ public final class NetworkAnalysis {
 	}
 
 	private static Function<Edge<Protein>, Color> createEdgeColorFunction(Configuration c, GeneSetMap primary, GeneSetMap secondary, LayeredGraph<Protein> graph){
-		final int LOWER_ALPHA_BOUND = 50;
+		final int LOWER_ALPHA_BOUND = c.rendererConfig.minEdgeAlpha;
 		final int UPPER_ALPHA_BOUND = 255;
 		final double MAXIMUM_NUM = graph.getMaxCount();
 		if(c.rendererConfig.varyEdgeAlphaValues)
-			return e -> new Color(0, 0, 0, (int)(LOWER_ALPHA_BOUND + (UPPER_ALPHA_BOUND - LOWER_ALPHA_BOUND) * (double) graph.getCount(e.getSource()) / MAXIMUM_NUM));
-			return e -> Color.BLACK;
+			return e -> new Color(0, 0, 0, (int)(LOWER_ALPHA_BOUND + (UPPER_ALPHA_BOUND - LOWER_ALPHA_BOUND) * Math.max(graph.getCount(e.getSource()), graph.getCount(e.getTarget())) / MAXIMUM_NUM));
+		return e -> Color.BLACK;
 	}
 
 	private static Renderer<Protein> createRenderer(Configuration c, GeneSetMap primary, GeneSetMap secondary, LayeredGraph<Protein> graph){
-		final Renderer<Protein> renderer = new GUIRenderer<>(c.rendererConfig);
+		final Renderer<Protein> renderer = new GUIRenderer<>(c.rendererConfig, new File(c.generalConfig.imageDirectory));
 		renderer.setLabelFunction(p -> p.getGene() == null ? p.getId() : p.getGene().getSymbol());
 		renderer.setNodeColorFunction(createNodeColorFunction(c, primary, secondary, graph));
 		renderer.setEdgeColorFunction(createEdgeColorFunction(c, primary, secondary, graph));
@@ -305,17 +325,19 @@ public final class NetworkAnalysis {
 	private static void layoutAndRender(Configuration c, GeneSetMap primary, GeneSetMap secondary, String projectNameSuffix) throws IOException {
 		// Render primary (secondary, primary - secondary, secondary - primary)
 		final List<Tuple<LayeredGraph<Protein>, String>> toRender = new LinkedList<>();
-
-		final LayeredGraph<Protein> primaryGraph = reduceLayeredGraph(primary.getLayeredGraph(), c);
-		if(primaryGraph.getNodes().size() > 0)
-			toRender.add(new Tuple<>(primaryGraph, "Primary"));
+		
+		final LayeredGraph<Protein> primaryGraph = primary.getLayeredGraph();
+		final LayeredGraph<Protein> primaryGraphReduced = reduceLayeredGraph(primaryGraph, c);
+		if(primaryGraphReduced.getNodes().size() > 0)
+			toRender.add(new Tuple<>(primaryGraphReduced, "Primary"));
 
 		//TODO refactor code
 		if(secondary != null){
 			
-			final LayeredGraph<Protein> secondaryGraph = reduceLayeredGraph(secondary.getLayeredGraph(), c);
-			if(secondaryGraph.getNodes().size() != 0){
-				toRender.add(new Tuple<>(secondaryGraph, "Secondary"));
+			final LayeredGraph<Protein> secondaryGraph = secondary.getLayeredGraph();
+			final LayeredGraph<Protein> secondaryGraphReduced = reduceLayeredGraph(secondaryGraph, c);
+			if(secondaryGraphReduced.getNodes().size() != 0){
+				toRender.add(new Tuple<>(secondaryGraphReduced, "Secondary"));
 
 				if(c.analysisConfig.calculateGraphDifferences){
 					final double numPrimary = primary.getGeneSetMap().size();
@@ -324,10 +346,10 @@ public final class NetworkAnalysis {
 					final double secondaryScalingFactor = numSecondary < numPrimary ? numPrimary / numSecondary : 1;
 					
 					
-					final LayeredGraph<Protein> primaryMinusSecondary = reduceLayeredGraph(primary.getLayeredGraph().subtract(secondary.getLayeredGraph(), primaryScalingFactor, secondaryScalingFactor), c);
+					final LayeredGraph<Protein> primaryMinusSecondary = reduceLayeredGraph(primaryGraph.subtract(secondaryGraph, primaryScalingFactor, secondaryScalingFactor), c);
 					if(primaryMinusSecondary.getNodes().size() > 0)
 						toRender.add(new Tuple<>(primaryMinusSecondary, "PrimaryMinusSecondary"));
-					final LayeredGraph<Protein> secondaryMinusPrimary = reduceLayeredGraph(secondary.getLayeredGraph().subtract(primary.getLayeredGraph(), secondaryScalingFactor, primaryScalingFactor), c);
+					final LayeredGraph<Protein> secondaryMinusPrimary = reduceLayeredGraph(secondaryGraph.subtract(primaryGraph, secondaryScalingFactor, primaryScalingFactor), c);
 					if(secondaryMinusPrimary.getNodes().size() > 0)
 						toRender.add(new Tuple<>(secondaryMinusPrimary, "SecondaryMinusPrimary"));
 				}
@@ -348,6 +370,7 @@ public final class NetworkAnalysis {
 	private static <K> double calculateIntersectionOverUnionSimilarity(Graph<K> x, Graph<K> y){
 		final Set<K> union = new HashSet<>(x.getNodes());
 		union.addAll(y.getNodes());
+		if(union.size() == 0) return 0;
 		final Set<K> intersection = new HashSet<>(x.getNodes());
 		intersection.retainAll(y.getNodes());
 		return (double) intersection.size() / union.size();
@@ -403,11 +426,10 @@ public final class NetworkAnalysis {
 						calculateGraphDistance(x, y));
 			}
 		}
-		System.out.println(dissimilarityMatrix);
 		final PhylogeneticTreeNode treeRoot = PhylogeneticTree.createTreeFromMatrix(dissimilarityMatrix);
 
 		try {
-			final DendrogramRenderer dr = new DendrogramRenderer(c.rendererConfig);
+			final DendrogramRenderer dr = new DendrogramRenderer(c.rendererConfig, new File(c.generalConfig.imageDirectory));
 
 			final Color defaultColor = parseColorOrDefault(c.rendererConfig.defaultNodeColor, null);
 			if(defaultColor == null)
@@ -484,8 +506,8 @@ public final class NetworkAnalysis {
 					System.out.println("\tDepth: " + ((int)(ptn.getDepth() * 100.0)) / 100.0);
 					System.out.println("\tNumber of leaves: " + nodeLeafs.length);
 					//System.out.println("\tTotal weight: " + ptn.getWeight());
-					System.out.println("\tNumber primary: " + (int)(primaryWeight / primaryInitialWeight) + " (" + ((int)(primaryWeight * 10000.0 / ptn.getWeight()))/100.0 + "%)");
-					System.out.println("\tNumber secondary: " + (int)((ptn.getWeight() - primaryWeight) / secondaryInitialWeight) + " (" + ((int)((ptn.getWeight() - primaryWeight) * 10000.0 / ptn.getWeight()))/100.0 + "%)"); 
+					System.out.println("\tNumber primary: " + Math.round((primaryWeight / primaryInitialWeight)) + " (" + ((int)(primaryWeight * 10000.0 / ptn.getWeight()))/100.0 + "%)");
+					System.out.println("\tNumber secondary: " + Math.round(((ptn.getWeight() - primaryWeight) / secondaryInitialWeight)) + " (" + ((int)((ptn.getWeight() - primaryWeight) * 10000.0 / ptn.getWeight()))/100.0 + "%)"); 
 					System.out.println("\tMax dissimilarity: " + ((int)(maxDissimilarity * 100.0)) / 100.0);
 					System.out.println();
 				}else{

@@ -20,6 +20,7 @@ public class GeneSet {
 	private final Graph<Protein> graph;
 	
 	public GeneSet(Collection<String> symbols){
+		assert(symbols.size() > 0);
 		geneSet = new HashSet<>(symbols.size());
 		proteinSet = new HashSet<>();
 		for(String symbol : symbols){

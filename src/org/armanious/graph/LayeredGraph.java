@@ -3,8 +3,6 @@ package org.armanious.graph;
 import java.util.Collection;
 import java.util.HashSet;
 
-import org.armanious.network.analysis.Protein;
-
 public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
 
 	private double maxCount = 0;
@@ -49,7 +47,7 @@ public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
 		
 		final LayeredGraph<K> result = new LayeredGraph<>();
 		final HashSet<K> toRetain = new HashSet<>();
-		//TODO FIXME 
+		
 		for(K node : getNodes())
 			if(!lg.getNodes().contains(node) || lhsFactor * getCount(node) > rhsFactor * (lg.getNodes().contains(node) ? lg.getCount(node) : 0))
 				toRetain.add(node);
@@ -57,16 +55,8 @@ public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
 			for(Edge<K> edge : neighbors.get(node))
 				if(toRetain.contains(edge.getSource()) && toRetain.contains(edge.getTarget()))
 					result.addEdge(edge);
-		for(K node : toRetain){
-
+		for(K node : toRetain)
 			result.setCount(node, lhsFactor * getCount(node) - rhsFactor * (lg.getNodes().contains(node) ? lg.getCount(node) : 0));
-			Protein p = (Protein)node;
-			if(p.getGene() != null){
-				System.out.println("Subtraction information for " + p.getGene().getSymbol() + ":\n\tLHS: " + lhsFactor * getCount(node) + "\n\tRHS: " + rhsFactor * (lg.getNodes().contains(node) ? lg.getCount(node) : 0)
-						+ "\n\tResult: " + result.getCount(node));
-			}
-		}
-
 		return result;
 	}
 

@@ -224,8 +224,7 @@ public class PTBLiveTest {
 					"maxPathUnconfidence=200",
 					"maxPathLength=3",
 					"percentageOfNodesToRender=1",
-					"maxNodesInGraphToRender=50",
-					"layoutAndRender=true",
+					"maxNodesInGraphToRender=100",
 			});
 			NetworkAnalysis.run(c);
 			System.exit(0);
