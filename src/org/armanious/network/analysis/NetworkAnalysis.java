@@ -38,9 +38,14 @@ public final class NetworkAnalysis {
 
 	public static void run(Configuration c) throws IOException {
 		// load gene sets
-		GeneSetMap primary = GeneSetMap.loadFromFile(c.generalConfig.primaryGeneSetGroupFile);
-		GeneSetMap secondary = c.generalConfig.secondaryGeneSetGroupFile != null ? GeneSetMap.loadFromFile(c.generalConfig.secondaryGeneSetGroupFile) : null;
-		run(c, primary, secondary);
+		Tuple<Map<String, Gene>, Map<String, Protein>> maps = Gene.loadGenes(c.generalConfig.proteinAliasesFile);		
+		final Map<String, Gene> geneMap = maps.val1();
+		final Map<String, Protein> proteinMap = maps.val2();
+		Function<String, Gene> database = (symbol) -> geneMap.get(symbol);
+		GeneSetMap primary = GeneSetMap.loadFromFile(c.generalConfig.primaryGeneSetGroupFile, database);
+		GeneSetMap secondary = c.generalConfig.secondaryGeneSetGroupFile != null ? GeneSetMap.loadFromFile(c.generalConfig.secondaryGeneSetGroupFile, database) : null;
+		geneMap.clear(); //save some memory before running full program
+		run(c, primary, secondary, proteinMap);
 	}
 	
 	public static void run(Configuration c, GeneSetMap primary) throws IOException {
@@ -48,6 +53,14 @@ public final class NetworkAnalysis {
 	}
 	
 	public static void run(Configuration c, GeneSetMap primary, GeneSetMap secondary) throws IOException {
+		Tuple<Map<String, Gene>, Map<String, Protein>> maps = Gene.loadGenes(c.generalConfig.proteinAliasesFile);		
+		final Map<String, Gene> geneMap = maps.val1();
+		final Map<String, Protein> proteinMap = maps.val2();
+		geneMap.clear();
+		run(c, primary, secondary, proteinMap);
+	}
+	
+	public static void run(Configuration c, GeneSetMap primary, GeneSetMap secondary, Map<String, Protein> proteinMap) throws IOException {
 		if(secondary != null){
 			for(String primaryKey : primary.getGeneSetMap().keySet()){
 				if(secondary.getGeneSetMap().keySet().contains(primaryKey)){
@@ -56,9 +69,9 @@ public final class NetworkAnalysis {
 				}
 			}
 		}
-
+		
 		// load/compute pairwise shortest paths
-		computeAndSaveSetGraphs(c, primary, secondary);
+		computeAndSaveSetGraphs(c, primary, secondary, proteinMap);
 
 
 		// UPGMA
@@ -96,10 +109,9 @@ public final class NetworkAnalysis {
 		//final Set<Tuple<Protein, Protein>> checked = new HashSet<>();
 		try(final BufferedWriter bw = new BufferedWriter(new FileWriter(file))){
 			
-			bw.write(c.proteinInteractomeConfig.STRINGversion); bw.newLine();
-			bw.write(String.valueOf(c.proteinInteractomeConfig.minConfidence)); bw.newLine();
+			bw.write(String.valueOf(c.analysisConfig.minInteractomeConfidence)); bw.newLine();
 			bw.write(String.valueOf(c.analysisConfig.maxPathLength)); bw.newLine();
-			bw.write(String.valueOf(c.analysisConfig.maxPathUnconfidence)); bw.newLine();
+			bw.write(String.valueOf(c.analysisConfig.maxPathCost)); bw.newLine();
 			
 			for(Protein src : map.keySet()){
 				final Map<Protein, Path<Protein>> byTarget = map.get(src);
@@ -110,7 +122,7 @@ public final class NetworkAnalysis {
 					if(pathEdges.size() == 0){
 						bw.write("nopath");
 						bw.write(',');
-						bw.write(src.getId()); 
+						bw.write(src.getId());
 						bw.write(',');
 						bw.write(target.getId());
 					}else{
@@ -130,20 +142,20 @@ public final class NetworkAnalysis {
 		System.out.println("Saved " + saved + " paths");
 	}
 
-	private static void loadPaths(Configuration c, File file, Map<Protein, Map<Protein, Path<Protein>>> map) throws IOException {
+	
+	//TODO FIXME
+	private static void loadPaths(Configuration c, File file, Map<Protein, Map<Protein, Path<Protein>>> map, Map<String, Protein> proteinMap) throws IOException {
 		try(final BufferedReader br = new BufferedReader(new FileReader(file))){
 			int count = 0;
 			String s;
 			
-			final String version = br.readLine();
 			final double minConfidence = Double.parseDouble(br.readLine());
 			final int maxPathLength = Integer.parseInt(br.readLine());
 			final double maxPathUnconfidence = Double.parseDouble(br.readLine());
 			
-			if(!version.equals(c.proteinInteractomeConfig.STRINGversion)
-					|| minConfidence != c.proteinInteractomeConfig.minConfidence
+			if(minConfidence != c.analysisConfig.minInteractomeConfidence
 					|| maxPathLength != c.analysisConfig.maxPathLength
-					|| maxPathUnconfidence != c.analysisConfig.maxPathUnconfidence){
+					|| maxPathUnconfidence != c.analysisConfig.maxPathCost){
 				System.out.println("Old data outdated: need to recompute everything.");
 				return;
 			}
@@ -153,19 +165,19 @@ public final class NetworkAnalysis {
 				final String[] parts = s.split(",");
 				if(parts.length < 3) continue;
 				if(parts.length == 3 && parts[0].equalsIgnoreCase("nopath")){
-					final Protein source = Protein.getProtein(parts[1], true);
-					final Protein target = Protein.getProtein(parts[2], true);
+					final Protein source = proteinMap.get(parts[1]); //Protein.getProtein(parts[1], true);
+					final Protein target = proteinMap.get(parts[2]); //Protein.getProtein(parts[2], true);
 					//System.out.println("L," + source.getId() + "," + target.getId());
 					addPathToMapHelper(source, target, new Path<>(), map, false);
 				}else{
-					final Protein source = Protein.getProtein(parts[0], true);
+					final Protein source = proteinMap.get(parts[0]); //Protein.getProtein(parts[0], true);
 					Protein prev = source;
 					Protein target = null;
 
 					final ArrayList<Edge<Protein>> pathEdges = new ArrayList<>();
 					for(int i = 1; i < parts.length - 1; i += 2){
 						final int weight = Integer.parseInt(parts[i]);
-						target = Protein.getProtein(parts[i+1], true);
+						target = proteinMap.get(parts[i+1]); //Protein.getProtein(parts[i+1], true);
 						pathEdges.add(new Edge<>(prev, target, weight));
 						prev = target;
 					}
@@ -180,14 +192,17 @@ public final class NetworkAnalysis {
 
 	private static int hits;
 	private static int misses;
-	private static void computeAndSaveSetGraphs(Configuration c, GeneSetMap primary, GeneSetMap secondary) throws IOException {
+	private static void computeAndSaveSetGraphs(Configuration c, GeneSetMap primary, GeneSetMap secondary, Map<String, Protein> proteinMap) throws IOException {
 		final File dataFile = new File(c.generalConfig.activeDirectory + c.generalConfig.projectName + PROJECT_DATA_SUFFIX);
 		final Map<Protein, Map<Protein, Path<Protein>>> precomputedPaths = new HashMap<>();
 		if(c.analysisConfig.reusePreviousData && dataFile.exists())
-			loadPaths(c, dataFile, precomputedPaths);
+			loadPaths(c, dataFile, precomputedPaths, proteinMap);
 
 		// load protein interactome TODO load lazily
-		ProteinInteractionGraph pig = new ProteinInteractionGraph(c.proteinInteractomeConfig, c.analysisConfig.maxPathUnconfidence);
+		ProteinInteractionGraph pig = new ProteinInteractionGraph(
+				Math.max(1000D - c.analysisConfig.maxPathCost, c.analysisConfig.minInteractomeConfidence),
+				c.generalConfig.proteinInteractomeFile,
+				proteinMap);
 		// TODO double check Dijkstra' returning null
 		final Function<Tuple<Protein, Protein>, Path<Protein>> pathfinder = t -> {
 			Path<Protein> path = precomputedPaths.getOrDefault(t.val1(), Collections.emptyMap()).get(t.val2());
@@ -195,7 +210,7 @@ public final class NetworkAnalysis {
 				misses++;
 				//System.out.println(t.val1().getId() + "," + t.val2().getId());
 				path = pig.dijkstras(t.val1(), t.val2(), e -> 1000D - e.getWeight(),
-						c.analysisConfig.maxPathUnconfidence,
+						c.analysisConfig.maxPathCost,
 						c.analysisConfig.maxPathLength);
 				assert(path != null);
 				//System.out.println(path.getEdges());
@@ -235,14 +250,14 @@ public final class NetworkAnalysis {
 		final ArrayList<Tuple<K, Integer>> degree = new ArrayList<>();
 		for(K k : g.getNodes()) degree.add(new Tuple<>(k, g.getNeighbors(k).size()));
 		degree.sort(Comparator.comparingInt(t -> -t.val2()));
-		final int toRetainCount = (int) Math.ceil(Math.min(c.analysisConfig.percentageOfNodesToRender * degree.size(), c.analysisConfig.maxNodesInGraphToRender));
+		final int toRetainCount = (int) Math.ceil(Math.min(c.analysisConfig.fractionOfNodesToRender * degree.size(), c.analysisConfig.maxNodesToRender));
 		final Set<K> toRetain = new HashSet<>();
 		for(int i = 0; i < toRetainCount; i++) toRetain.add(degree.get(i).val1());
 		//System.out.println("Reduced graph size: " + toRetain.size());
 		return g.subgraphWithNodes(new LayeredGraph<>(), toRetain);
 	}
 
-	private static Color parseColorOrDefault(String s, Color defaultColor){
+	public static Color parseColorOrDefault(String s, Color defaultColor){
 		if(s == null || s.isEmpty() || s.equalsIgnoreCase("null")) return defaultColor;
 		assert(s.charAt(0) == '(' && s.charAt(s.length() - 1) == ')');
 		final String[] parts = s.substring(1, s.length() - 1).split(",");

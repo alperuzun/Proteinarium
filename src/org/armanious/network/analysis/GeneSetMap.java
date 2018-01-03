@@ -27,26 +27,24 @@ public class GeneSetMap {
 		this(Collections.emptyMap());
 	}
 	
-	public GeneSetMap(Map<String, ? extends Collection<String>> map){
+	public GeneSetMap(Map<String, ? extends Collection<String>> map, Function<String, Gene> geneDatabase){
 		geneSetMap = new HashMap<>();
 		uniqueGenes = new HashSet<>();
 		uniqueProteins = new HashSet<>();
 		for(String id : map.keySet()){
-			final GeneSet geneSet = new GeneSet(map.get(id));
+			final GeneSet geneSet = new GeneSet(map.get(id), geneDatabase);
 			geneSetMap.put(id, geneSet);
 			uniqueGenes.addAll(geneSet.getGenes());
 			uniqueProteins.addAll(geneSet.getProteins());
 		}
 	}
 	
-	public GeneSetMap(Map<String, ? extends Collection<Gene>> map, boolean genesInCollection){
-		assert(genesInCollection);
-		
+	public GeneSetMap(Map<String, ? extends Collection<Gene>> map){		
 		geneSetMap = new HashMap<>();
 		uniqueGenes = new HashSet<>();
 		uniqueProteins = new HashSet<>();
 		for(String id : map.keySet()){
-			final GeneSet geneSet = new GeneSet(map.get(id), true);
+			final GeneSet geneSet = new GeneSet(map.get(id));
 			geneSetMap.put(id, geneSet);
 			uniqueGenes.addAll(geneSet.getGenes());
 			uniqueProteins.addAll(geneSet.getProteins());
@@ -100,7 +98,7 @@ public class GeneSetMap {
 		return gsm;
 	}
 	
-	public static GeneSetMap loadFromFile(String geneSetGroupFile) throws IOException {
+	public static GeneSetMap loadFromFile(String geneSetGroupFile, Function<String, Gene> geneDatabase) throws IOException {
 		final Map<String, List<String>> geneSetMap = new HashMap<>();
 		try(final BufferedReader br = new BufferedReader(new FileReader(geneSetGroupFile))){
 			String s;
@@ -112,7 +110,7 @@ public class GeneSetMap {
 				geneSetMap.put(s.substring(0, idx), Arrays.asList(geneSymbols));
 			}
 		}
-		return new GeneSetMap(geneSetMap);
+		return new GeneSetMap(geneSetMap, geneDatabase);
 	}
 
 }

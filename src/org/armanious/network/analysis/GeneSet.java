@@ -19,12 +19,12 @@ public class GeneSet {
 	
 	private final Graph<Protein> graph;
 	
-	public GeneSet(Collection<String> symbols){
+	public GeneSet(Collection<String> symbols, Function<String, Gene> geneDatabase){
 		assert(symbols.size() > 0);
 		geneSet = new HashSet<>(symbols.size());
 		proteinSet = new HashSet<>();
 		for(String symbol : symbols){
-			final Gene gene = Gene.getGene(symbol);
+			final Gene gene = geneDatabase.apply(symbol);
 			geneSet.add(gene);
 			proteinSet.addAll(gene.getProteins());
 		}
@@ -32,9 +32,7 @@ public class GeneSet {
 		//pairwisePathMap = new HashSet<>();
 	}
 	
-	public GeneSet(Collection<Gene> genes, boolean genesInCollection){
-		assert(genesInCollection);
-		
+	public GeneSet(Collection<Gene> genes){		
 		geneSet = new HashSet<>(genes);
 		proteinSet = new HashSet<>();
 		for(Gene gene : geneSet) proteinSet.addAll(gene.getProteins());

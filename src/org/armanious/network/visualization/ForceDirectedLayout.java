@@ -24,13 +24,13 @@ public class ForceDirectedLayout<K> {
 	
 	public ForceDirectedLayout(ForceDirectedLayoutConfig fdlc, Graph<K> graph, Renderer<K> renderer, String name){
 		this.fdlc = fdlc;
-		final double minSize = fdlc.minNodeSize;
-		final double maxSize = fdlc.maxNodeSize < 0 ? Math.max(2 * fdlc.minNodeSize, Math.min(100, graph.getNodes().size())) : fdlc.maxNodeSize;
-		assert(maxSize >= minSize);
-		final double deltaSize = (maxSize - minSize) / graph.getNodes().size();
+		final double minRadius = fdlc.minNodeRadius;
+		final double maxRadius = fdlc.maxNodeRadius < 0 ? Math.max(2 * fdlc.minNodeRadius, Math.min(100, graph.getNodes().size())) : fdlc.maxNodeRadius;
+		assert(maxRadius >= minRadius);
+		final double deltaSize = (maxRadius - minRadius) / graph.getNodes().size();
 				
 		data = new GraphLayoutData<>(graph,
-				k -> minSize + deltaSize * graph.getNeighbors(k).size());
+				k -> minRadius + deltaSize * graph.getNeighbors(k).size());
 		this.renderer = renderer;
 		this.name = name;
 	}
@@ -110,7 +110,7 @@ public class ForceDirectedLayout<K> {
 		public Point2D.Double[] positions;
 		
 		@SuppressWarnings("unchecked")
-		private GraphLayoutData(Graph<K> g, Function<K, Double> nodeSizeFunction){
+		private GraphLayoutData(Graph<K> g, Function<K, Double> nodeRadiusFunction){
 			nodes = g.getNodes().toArray((K[]) Array.newInstance(g.getNodes().iterator().next().getClass(), g.getNodes().size()));
 			neighbors = new int[nodes.length][];
 			edges = new Edge[nodes.length][];
@@ -128,7 +128,7 @@ public class ForceDirectedLayout<K> {
 						random.nextGaussian() * nodes.length*/
 						);
 				positions[i] = pos;
-				radii[i] = nodeSizeFunction.apply(nodes[i]);
+				radii[i] = nodeRadiusFunction.apply(nodes[i]);
 				assert(radii[i] >= 1);
 			}
 			int maxDegree = 0;

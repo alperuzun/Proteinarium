@@ -1,12 +1,16 @@
 package org.armanious.network.analysis.testunits;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -18,9 +22,7 @@ import java.util.Set;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.armanious.io.IOUtils;
 import org.armanious.network.Configuration;
-import org.armanious.network.analysis.Gene;
 import org.armanious.network.analysis.NetworkAnalysis;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -46,8 +48,8 @@ public class PTBLiveTest {
 	private final Map<String, Integer> columnIndexMap;
 	private final List<String[]> table;
 
-	private final Map<String, Collection<Gene>> caseGenes;
-	private final Map<String, Collection<Gene>> controlGenes;
+	private final Map<String, Collection<String>> caseGenes;
+	private final Map<String, Collection<String>> controlGenes;
 
 	public PTBLiveTest(Reader reader) throws IOException {
 		System.out.println("Parsing VCF file and loading all related SNP data");
@@ -78,13 +80,13 @@ public class PTBLiveTest {
 		caseGenes = parseGenes(CASES);
 		controlGenes = parseGenes(CONTROLS);
 
-		final Set<Gene> uniqueGenes = new HashSet<>();
+		final Set<String> uniqueGenes = new HashSet<>();
 		int sum = 0;
-		for(Collection<Gene> set : caseGenes.values()){
+		for(Collection<String> set : caseGenes.values()){
 			sum += set.size();
 			uniqueGenes.addAll(set);
 		}
-		for(Collection<Gene> set : controlGenes.values()){
+		for(Collection<String> set : controlGenes.values()){
 			sum += set.size();
 			uniqueGenes.addAll(set);
 		}
@@ -134,8 +136,8 @@ public class PTBLiveTest {
 		return false;
 	}
 
-	private Map<String, Collection<Gene>> parseGenes(String[] cohort){
-		final Map<String, Collection<Gene>> snpsMapping = new HashMap<>();
+	private Map<String, Collection<String>> parseGenes(String[] cohort){
+		final Map<String, Collection<String>> snpsMapping = new HashMap<>();
 		final int[] cohortIndices = new int[cohort.length];
 		for(int i = 0; i < cohortIndices.length; i++){
 			cohortIndices[i] = columnIndexMap.get(cohort[i]);
@@ -151,7 +153,7 @@ public class PTBLiveTest {
 			for(int i = 0; i < cohort.length; i++){
 				if(row[cohortIndices[i]].substring(0, 3).contains("1")){
 					try{
-						final Gene gene = Gene.getGene(getGeneSymbolFromSnpId(rsSNP));
+						final String gene = getGeneSymbolFromSnpId(rsSNP);
 						if(gene != null) snpsMapping.get(cohort[i]).add(gene);
 					}catch(AssertionError ignored){}
 				}
@@ -172,7 +174,15 @@ public class PTBLiveTest {
 			if(!target.exists()){
 				final String url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=SNP&id=" + rsId + "&rettype=xml&retmode=xml&version=2.0";
 				try {
-					IOUtils.writeToFile(IOUtils.readURL(url), target);
+					final BufferedInputStream in = new BufferedInputStream(new URL(url).openStream());
+					final BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(target));
+					final byte[] buffer = new byte[4096];
+					int read;
+					while((read = in.read(buffer, 0, buffer.length)) != -1)
+						out.write(buffer, 0, read);
+					out.flush();
+					out.close();
+					in.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 					System.exit(1);
@@ -196,8 +206,8 @@ public class PTBLiveTest {
 				try(final BufferedWriter bw = new BufferedWriter(new FileWriter("ptbCases.txt"))){
 					for(String key : caseGenes.keySet()){
 						final StringBuilder sb = new StringBuilder(key).append('=');
-						for(Gene g : caseGenes.get(key)){
-							sb.append(g.getSymbol());
+						for(String g : caseGenes.get(key)){
+							sb.append(g);
 							sb.append(',');
 						}
 						bw.write(sb.substring(0, sb.length() - (caseGenes.get(key).size() > 0 ? 1 : 0)));
@@ -209,8 +219,8 @@ public class PTBLiveTest {
 				try(final BufferedWriter bw = new BufferedWriter(new FileWriter("ptbControls.txt"))){
 					for(String key : controlGenes.keySet()){
 						final StringBuilder sb = new StringBuilder(key).append('=');
-						for(Gene g : controlGenes.get(key)){
-							sb.append(g.getSymbol());
+						for(String g : controlGenes.get(key)){
+							sb.append(g);
 							sb.append(',');
 						}
 						bw.write(sb.substring(0, sb.length() - (controlGenes.get(key).size() > 0 ? 1 : 0)));
@@ -234,7 +244,7 @@ public class PTBLiveTest {
 	}
 
 	public static void main(String...args) throws Throwable {
-		Gene.initializeGeneDatabase(new File("/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.aliases.v10.5.hgnc_with_symbol.txt"));
+		//Gene.initializeGeneDatabase(new File("/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.aliases.v10.5.hgnc_with_symbol.txt"));
 		if(args == null || args.length == 0){
 			args = new String[]{
 					"/Users/david/OneDrive/Documents/Brown/Comp Bio Research/Preterm Birth SNPs Analysis/Whole Analysis v2/Original Input/",
@@ -245,7 +255,7 @@ public class PTBLiveTest {
 	}
 	
 	public static void main_(String...args) throws IOException{
-		Gene.initializeGeneDatabase(new File("/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.aliases.v10.5.hgnc_with_symbol.txt"));
+		//Gene.initializeGeneDatabase(new File("/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.aliases.v10.5.hgnc_with_symbol.txt"));
 		final Configuration c = Configuration.fromArgs(new String[]{
 				"primaryGeneSetGroupFile=ptbCases.txt",
 				"secondaryGeneSetGroupFile=ptbControls.txt",

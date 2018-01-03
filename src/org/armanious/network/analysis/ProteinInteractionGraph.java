@@ -1,23 +1,25 @@
 package org.armanious.network.analysis;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Map;
+import java.util.zip.GZIPInputStream;
 
 import org.armanious.graph.Graph;
-import org.armanious.network.Configuration.ProteinInteractomeConfig;
 
 public class ProteinInteractionGraph extends Graph<Protein> {
-
-	public ProteinInteractionGraph(ProteinInteractomeConfig pic) throws IOException {
-		this(pic, Double.MAX_VALUE);
-	}
 	
-	public ProteinInteractionGraph(ProteinInteractomeConfig pic, double maxPathUnconfidence) throws IOException {
-		load(Math.max(1000 - maxPathUnconfidence, pic.minConfidence), new BufferedReader(new FileReader(pic.interactomeFile)));
+	public ProteinInteractionGraph(double threshold, String interactomeFile, Map<String, Protein> proteinMap) throws IOException {
+		InputStream is = new FileInputStream(interactomeFile);
+		if(interactomeFile.endsWith(".gz"))
+			is = new GZIPInputStream(is);
+		load(threshold, new BufferedReader(new InputStreamReader(is)), proteinMap);
 	}
 
-	private void load(double threshold, BufferedReader in) throws IOException {
+	private void load(double threshold, BufferedReader in, Map<String, Protein> proteinMap) throws IOException {
 		System.out.println("Loading protein interaction graph...");
 		String s;
 		while((s = in.readLine()) != null){
@@ -26,9 +28,10 @@ public class ProteinInteractionGraph extends Graph<Protein> {
 				continue;
 			final int weight = Integer.parseInt(parts[2]);
 			if(weight >= threshold){
-				final Protein a = Protein.getProtein(parts[0], true);
-				final Protein b = Protein.getProtein(parts[1], true);
-				addEdge(a, b, weight);
+				final Protein a = proteinMap.get(parts[0]); //Protein.getProtein(parts[0], true);
+				final Protein b = proteinMap.get(parts[1]); //Protein.getProtein(parts[1], true);
+				if(a != null && b != null)
+					addEdge(a, b, weight);
 			}
 		}
 		in.close();

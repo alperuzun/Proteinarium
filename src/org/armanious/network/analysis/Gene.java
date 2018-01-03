@@ -1,125 +1,84 @@
 package org.armanious.network.analysis;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.Reader;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.zip.GZIPInputStream;
+
+import org.armanious.Tuple;
 
 public class Gene {
-
-	private static HashMap<Integer, Gene> genesById;
-	private static HashMap<String, Gene> genesBySymbol;
 	
-	private final int hgncId;
 	private final String symbol;
-	private final ArrayList<Protein> proteins = new ArrayList<>();
+	private final Set<Protein> proteins = new HashSet<>();
 	
-	private Gene(int hgncId, String symbol){
-		if(genesById.containsKey(hgncId) || genesBySymbol.containsKey(symbol))
-			throw new IllegalStateException("Gene " + hgncId + " already loaded");
-		this.hgncId = hgncId;
+	public Gene(String symbol){
 		this.symbol = symbol;
-		genesById.put(hgncId, this);
-		genesBySymbol.put(symbol, this);
-	}
-	
-	public int getHgncId(){
-		return hgncId;
 	}
 	
 	public String getSymbol(){
 		return symbol;
 	}
 	
-	public void addProtein(Protein protein){
-		proteins.add(protein);
+	public Set<Protein> getProteins(){
+		return Collections.unmodifiableSet(proteins);
 	}
 	
-	public Collection<Protein> getProteins(){
-		return proteins;
+	public Protein addProtein(String protein){
+		final Protein p = new Protein(this, protein);
+		proteins.add(p);
+		return p;
 	}
 	
+	@Override
 	public String toString(){
 		return getSymbol();
 	}
 	
+	@Override
 	public int hashCode(){
-		return hgncId;
+		return getSymbol().hashCode() * 71 + getProteins().hashCode();
 	}
 	
+	@Override
 	public boolean equals(Object o){
-		return o instanceof Gene && o.toString().equals(this.toString());
+		return o instanceof Gene && equals((Gene)o);
 	}
 	
-	public static Gene[] getGenes(){
-		return genesById.values().toArray(new Gene[genesById.size()]);
-	}
-	
-	public static Gene getGene(String symbol){
-		if(genesBySymbol == null)
-			throw new IllegalStateException("Gene database not yet initialized");
-		assert(genesBySymbol.containsKey(symbol));
-		return genesBySymbol.get(symbol);
-	}
-	
-	public static Gene getGene(int id){
-		if(genesById == null)
-			throw new IllegalStateException("Gene database not yet initialized");
-		assert(genesById.containsKey(id));
-		return genesById.get(id);
-	}
-	
-	public static Gene[] getGenes(String...ids){
-		if(ids == null) return null;
-		final Gene[] arr = new Gene[ids.length];
-		for(int i = 0; i < ids.length; i++){
-			try{
-				arr[i] = Gene.getGene(Integer.parseInt(ids[i]));
-			}catch(NumberFormatException e){
-				arr[i] = Gene.getGene(ids[i]);
-			}
-		}
-		return arr;
-	}
-	
-	private static void initializeGeneDatabase() {
-		String urlforversion = "view-source:https://string-db.org/";
-		String urllinks = "https://stringdb-static.org/download/protein.links.v" + version + "/9606.protein.links.v10.5.txt.gz";
-		String urlaliases = "https://stringdb-static.org/download/protein.aliases.v" + version + "/9606.protein.aliases.v10.5.txt.gz";
-		//parse for in parts[2] "BLAST_KEGG_NAME"
-		initializeGeneDatabase(new FileReader(f));
-	}
-	
-	public static void initializeGeneDatabase(Reader r) throws IOException {
-		if(genesById != null)
-			throw new IllegalStateException("Gene database already initialized");
-		genesById = new HashMap<>();
-		genesBySymbol = new HashMap<>();
-		System.out.print("Initializing gene database...");
-		System.out.flush();
-		if(!(r instanceof BufferedReader))
-			r = new BufferedReader(r);
-		BufferedReader br = (BufferedReader) r;
-		String s;
-		while((s = br.readLine()) != null){
-			final String[] parts = s.split("\t");
-			if(Protein.getProtein(parts[0]) != null) continue;
-			final int id = Integer.parseInt(parts[1].substring(5));
-			Gene gene = genesById.get(id);
-			if(gene == null) gene = new Gene(id, parts[2]);
-			gene.addProtein(new Protein(parts[0], gene));
-		}
-		System.out.println("finished");
+	public boolean equals(Gene gene){
+		return getSymbol().equals(gene.getSymbol()) 
+				&& getProteins().equals(gene.getProteins());
 	}
 
-	public static boolean loadedGene(String gene) {
-		if(genesById == null)
-			throw new IllegalStateException("Gene database not yet initialized");
-		return genesBySymbol.containsKey(gene);
+	public static Tuple<Map<String, Gene>, Map<String, Protein>> loadGenes(String proteinAliasesFile) throws IOException {
+		InputStream in = new FileInputStream(proteinAliasesFile);
+		if(proteinAliasesFile.endsWith(".gz"))
+			in = new GZIPInputStream(in);
+		final BufferedReader br = new BufferedReader(new InputStreamReader(in));
+		String s;
+		final Map<String, Gene> geneMap = new HashMap<>();
+		final Map<String, Protein> proteinMap = new HashMap<>();
+		while((s = br.readLine()) != null){
+			if(s.startsWith("#")) continue;
+			final String[] parts = s.split("\t");
+			if(parts[2].contains("BLAST_KEGG_NAME")){
+				final String symbol = parts[1];
+				final String protein = parts[0];
+				Gene gene = geneMap.get(symbol);
+				if(gene == null)
+					geneMap.put(symbol, gene = new Gene(symbol));
+				proteinMap.put(protein, gene.addProtein(protein));
+			}
+		}
+		br.close();
+		return new Tuple<>(geneMap, proteinMap);
 	}
 
 }

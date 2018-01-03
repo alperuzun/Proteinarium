@@ -25,6 +25,7 @@ import javax.imageio.ImageIO;
 
 import org.armanious.Tuple;
 import org.armanious.network.Configuration.RendererConfig;
+import org.armanious.network.analysis.NetworkAnalysis;
 import org.armanious.network.analysis.PhylogeneticTreeNode;
 
 public class DendrogramRenderer {
@@ -55,8 +56,6 @@ public class DendrogramRenderer {
 				queue.add(leaves[i].getParent());
 		}
 
-		System.out.println(positions);
-
 		double minDeltaX = Double.MAX_VALUE;
 
 		while(!queue.isEmpty()){
@@ -86,11 +85,11 @@ public class DendrogramRenderer {
 		}
 
 		final double xMultiplier = xPadding / minDeltaX;
-		System.out.println("minDeltaX: " + minDeltaX + "\npadding: " + xPadding + "\nxMultiplier: " + xMultiplier);
+		//System.out.println("minDeltaX: " + minDeltaX + "\npadding: " + xPadding + "\nxMultiplier: " + xMultiplier);
 		for(Point2D.Double point : positions.values())
 			point.x *= xMultiplier;
 
-		System.out.println(positions);
+		//System.out.println(positions);
 
 
 		return positions;
@@ -120,7 +119,7 @@ public class DendrogramRenderer {
 				RenderingHints.VALUE_RENDER_QUALITY);
 		g.translate(xPadding, yPadding);
 		
-		g.setColor(Color.WHITE);
+		g.setColor(NetworkAnalysis.parseColorOrDefault(rc.backgroundColor, Color.WHITE));
 		if(rc.transparentBackground) g.setComposite(AlphaComposite.Clear);
 		g.fillRect(0, 0, maxX, maxY);
 		g.setComposite(AlphaComposite.SrcOver);
@@ -168,10 +167,10 @@ public class DendrogramRenderer {
 			}
 
 		}
-
-		return new Tuple<>(image, clusterMapping);
+		
+		return new Tuple<>(RenderingUtils.addLegend(rc, image), clusterMapping);
 	}
-
+	
 	public Map<String, PhylogeneticTreeNode> render(PhylogeneticTreeNode root, String name) throws IOException {
 		System.out.println("Generating image of " + name + " for output to file...");
 		final Tuple<BufferedImage, Map<String, PhylogeneticTreeNode>> imageAndMapping = generateBufferedImageAndMapping(root);
