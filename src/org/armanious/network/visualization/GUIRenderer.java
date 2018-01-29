@@ -23,12 +23,12 @@ public class GUIRenderer<K> extends Renderer<K> {
 	
 	private int iteration;
 
-	public GUIRenderer(RendererConfig rc, File imageDirectory) {
-		this(rc, imageDirectory, 20);
+	public GUIRenderer(RendererConfig rc, File outputDirectory) {
+		this(rc, outputDirectory, 20);
 	}
 	
-	public GUIRenderer(RendererConfig rc, File imageDirectory, int skipIterations){
-		super(rc, imageDirectory);
+	public GUIRenderer(RendererConfig rc, File outputDirectory, int skipIterations){
+		super(rc, outputDirectory);
 		this.skipIterations = skipIterations;
 		iteration = skipIterations;
 	}
@@ -48,7 +48,7 @@ public class GUIRenderer<K> extends Renderer<K> {
 	@Override
 	public void handleLayoutIteration(GraphLayoutData<K> data, String name) throws IOException {
 		if(iteration == skipIterations){
-			getRendererPanel(name).renderImage(super.generateBufferedImage(data));
+			getRendererPanel(name).renderImage(super.generateBufferedImage(data, name));
 			iteration = 0;
 		}else{
 			iteration++;

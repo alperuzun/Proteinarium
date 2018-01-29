@@ -4,9 +4,10 @@ import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Random;
 import java.util.function.Function;
 
 import org.armanious.graph.Edge;
@@ -14,8 +15,6 @@ import org.armanious.graph.Graph;
 import org.armanious.network.Configuration.ForceDirectedLayoutConfig;
 
 public class ForceDirectedLayout<K> {
-	
-	private static final Random random = new Random();
 	
 	private final ForceDirectedLayoutConfig fdlc;
 	private final GraphLayoutData<K> data;
@@ -112,6 +111,8 @@ public class ForceDirectedLayout<K> {
 		@SuppressWarnings("unchecked")
 		private GraphLayoutData(Graph<K> g, Function<K, Double> nodeRadiusFunction){
 			nodes = g.getNodes().toArray((K[]) Array.newInstance(g.getNodes().iterator().next().getClass(), g.getNodes().size()));
+			Arrays.sort(nodes, Comparator.comparing(k -> String.valueOf(k)));
+			
 			neighbors = new int[nodes.length][];
 			edges = new Edge[nodes.length][];
 			radii = new double[nodes.length];

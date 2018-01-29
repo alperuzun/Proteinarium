@@ -104,8 +104,12 @@ public class DistanceMatrix<T extends Comparable<T>> {
 		return sb.substring(0, sb.length() - 1);
 	}
 	
+	@SuppressWarnings("unchecked")
 	public DistanceMatrix<T> clone(){
-		return new DistanceMatrix<>(matrix);
+		final TreeMap<T, TreeMap<T, Double>> clone = new TreeMap<>();
+		for(T key : matrix.keySet())
+			clone.put(key, (TreeMap<T,Double>) matrix.get(key).clone());
+		return new DistanceMatrix<>(clone);
 	}
 
 }

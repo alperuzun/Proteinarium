@@ -79,11 +79,12 @@ public class RNKFilesTest {
 		}
 		
 		final Configuration c = Configuration.fromArgs(
-				"primaryGeneSetGroupFile=" + new File(directory, "cases.txt").getPath(),
-				"secondaryGeneSetGroupFile=" + new File(directory, "controls.txt").getPath(),
+				"group1GeneSetFile=" + new File(directory, "cases.txt").getPath(),
+				"group2GeneSetFile=" + new File(directory, "controls.txt").getPath(),
 				"activeDirectory=" + directory.getPath(),
 				"projectName=143Patients",
-				"maxNodesToRender=50"
+				"maxNodesToRender=50",
+				"metaClusterThreshold=0.8"
 			);
 		
 		NetworkAnalysis.run(c);

@@ -1,6 +1,7 @@
 package org.armanious.network.analysis;
 
 import java.awt.Color;
+import java.awt.Desktop;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -42,40 +43,40 @@ public final class NetworkAnalysis {
 		final Map<String, Gene> geneMap = maps.val1();
 		final Map<String, Protein> proteinMap = maps.val2();
 		Function<String, Gene> database = (symbol) -> geneMap.get(symbol);
-		GeneSetMap primary = GeneSetMap.loadFromFile(c.generalConfig.primaryGeneSetGroupFile, database);
-		GeneSetMap secondary = c.generalConfig.secondaryGeneSetGroupFile != null ? GeneSetMap.loadFromFile(c.generalConfig.secondaryGeneSetGroupFile, database) : null;
+		GeneSetMap group1 = GeneSetMap.loadFromFile(c.generalConfig.group1GeneSetFile, database, true);
+		GeneSetMap group2 = c.generalConfig.group2GeneSetFile != null ? GeneSetMap.loadFromFile(c.generalConfig.group2GeneSetFile, database, false) : null;
 		geneMap.clear(); //save some memory before running full program
-		run(c, primary, secondary, proteinMap);
+		run(c, group1, group2, proteinMap);
 	}
-	
-	public static void run(Configuration c, GeneSetMap primary) throws IOException {
-		run(c, primary, null);
+
+	public static void run(Configuration c, GeneSetMap group1) throws IOException {
+		run(c, group1, null);
 	}
-	
-	public static void run(Configuration c, GeneSetMap primary, GeneSetMap secondary) throws IOException {
+
+	public static void run(Configuration c, GeneSetMap group1, GeneSetMap group2) throws IOException {
 		Tuple<Map<String, Gene>, Map<String, Protein>> maps = Gene.loadGenes(c.generalConfig.proteinAliasesFile);		
 		final Map<String, Gene> geneMap = maps.val1();
 		final Map<String, Protein> proteinMap = maps.val2();
 		geneMap.clear();
-		run(c, primary, secondary, proteinMap);
+		run(c, group1, group2, proteinMap);
 	}
-	
-	public static void run(Configuration c, GeneSetMap primary, GeneSetMap secondary, Map<String, Protein> proteinMap) throws IOException {
-		if(secondary != null){
-			for(String primaryKey : primary.getGeneSetMap().keySet()){
-				if(secondary.getGeneSetMap().keySet().contains(primaryKey)){
-					System.err.println("Primary and secondary gene set groups cannot have duplicate identifier: " + primaryKey);
+
+	public static void run(Configuration c, GeneSetMap group1, GeneSetMap group2, Map<String, Protein> proteinMap) throws IOException {
+		if(group2 != null){
+			for(String group1Key : group1.getGeneSetMap().keySet()){
+				if(group2.getGeneSetMap().keySet().contains(group1Key)){
+					System.err.println("Group1 and group2 gene set groups cannot have duplicate identifier: " + group1Key);
 					return;
 				}
 			}
 		}
-		
+
 		// load/compute pairwise shortest paths
-		computeAndSaveSetGraphs(c, primary, secondary, proteinMap);
+		computeAndSaveSetGraphs(c, group1, group2, proteinMap);
 
 
 		// UPGMA
-		performClusterAnalysis(c, primary, secondary);
+		performClusterAnalysis(c, group1, group2);
 	}
 
 
@@ -108,11 +109,11 @@ public final class NetworkAnalysis {
 		int saved = 0;
 		//final Set<Tuple<Protein, Protein>> checked = new HashSet<>();
 		try(final BufferedWriter bw = new BufferedWriter(new FileWriter(file))){
-			
+
 			bw.write(String.valueOf(c.analysisConfig.minInteractomeConfidence)); bw.newLine();
 			bw.write(String.valueOf(c.analysisConfig.maxPathLength)); bw.newLine();
 			bw.write(String.valueOf(c.analysisConfig.maxPathCost)); bw.newLine();
-			
+
 			for(Protein src : map.keySet()){
 				final Map<Protein, Path<Protein>> byTarget = map.get(src);
 				for(Protein target : byTarget.keySet()){
@@ -142,24 +143,24 @@ public final class NetworkAnalysis {
 		System.out.println("Saved " + saved + " paths");
 	}
 
-	
+
 	//TODO FIXME
 	private static void loadPaths(Configuration c, File file, Map<Protein, Map<Protein, Path<Protein>>> map, Map<String, Protein> proteinMap) throws IOException {
 		try(final BufferedReader br = new BufferedReader(new FileReader(file))){
 			int count = 0;
 			String s;
-			
+
 			final double minConfidence = Double.parseDouble(br.readLine());
 			final int maxPathLength = Integer.parseInt(br.readLine());
 			final double maxPathUnconfidence = Double.parseDouble(br.readLine());
-			
+
 			if(minConfidence != c.analysisConfig.minInteractomeConfidence
 					|| maxPathLength != c.analysisConfig.maxPathLength
 					|| maxPathUnconfidence != c.analysisConfig.maxPathCost){
 				System.out.println("Old data outdated: need to recompute everything.");
 				return;
 			}
-			
+
 			while((s = br.readLine()) != null){
 				count++;
 				final String[] parts = s.split(",");
@@ -192,7 +193,7 @@ public final class NetworkAnalysis {
 
 	private static int hits;
 	private static int misses;
-	private static void computeAndSaveSetGraphs(Configuration c, GeneSetMap primary, GeneSetMap secondary, Map<String, Protein> proteinMap) throws IOException {
+	private static void computeAndSaveSetGraphs(Configuration c, GeneSetMap group1, GeneSetMap group2, Map<String, Protein> proteinMap) throws IOException {
 		final File dataFile = new File(c.generalConfig.activeDirectory + c.generalConfig.projectName + PROJECT_DATA_SUFFIX);
 		final Map<Protein, Map<Protein, Path<Protein>>> precomputedPaths = new HashMap<>();
 		if(c.analysisConfig.reusePreviousData && dataFile.exists())
@@ -220,28 +221,28 @@ public final class NetworkAnalysis {
 				hits++;
 				//System.out.println("Found cached path");
 			}
-			if((hits + misses) % 1000 == 0){
-				System.out.println(hits + misses + " pairwise paths checked...");
-			}
+			//if((hits + misses) % 1000 == 0){
+			//	System.out.println(hits + misses + " pairwise paths checked...");
+			//}
 			return path;
 		};
 
-		primary.computePairwisePathsAndGraph(pathfinder);
-		if(secondary != null)
-			secondary.computePairwisePathsAndGraph(pathfinder);
-		
-		
+		group1.computePairwisePathsAndGraph(pathfinder);
+		if(group2 != null)
+			group2.computePairwisePathsAndGraph(pathfinder);
+
+
 		//MOD12-2=EPHB2,P4HA2,ARHGEF10L,MYLK,ANGPTL4,SPTA1,ALK,LPA,HCLS1,PLA2G4C,MAP4K1,PRKCA,TBXAS1,ADH6,IQGAP2
-		//System.out.println(primary.getGeneSetMap().get("MOD12-2").getGraph().get);
+		//System.out.println(group1.getGeneSetMap().get("MOD12-2").getGraph().get);
 		//System.exit(0);;
-		//GeneSet gs = (primary.getGeneSetMap().get("MOD1-4"));
+		//GeneSet gs = (group1.getGeneSetMap().get("MOD1-4"));
 		//System.out.println("Number of genes in MOD1-4 graph.: " + gs.getGenes().size());
 		//System.exit(0);;
-		
-		
-		System.out.println(hits + " path cache hits.");
-		System.out.println(misses + " path cache misses.");
-		System.out.println((double) hits / (hits + misses) + " proportion of paths cached.");
+
+
+		//System.out.println(hits + " path cache hits.");
+		//System.out.println(misses + " path cache misses.");
+		//System.out.println((double) hits / (hits + misses) + " proportion of paths cached.");
 		savePaths(c, dataFile, precomputedPaths);
 	}
 
@@ -254,7 +255,7 @@ public final class NetworkAnalysis {
 		final Set<K> toRetain = new HashSet<>();
 		for(int i = 0; i < toRetainCount; i++) toRetain.add(degree.get(i).val1());
 		//System.out.println("Reduced graph size: " + toRetain.size());
-		return g.subgraphWithNodes(new LayeredGraph<>(), toRetain);
+		return g.subgraphWithNodes(new LayeredGraph<>(g.getType()), toRetain);
 	}
 
 	public static Color parseColorOrDefault(String s, Color defaultColor){
@@ -276,109 +277,196 @@ public final class NetworkAnalysis {
 		return colorGradient(x, y, 0.5);
 	}
 
-	private static Function<Protein, Color> createNodeColorFunction(Configuration c, GeneSetMap primary, GeneSetMap secondary, LayeredGraph<Protein> graph){
+	private static Function<Protein, Color> createNodeColorFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
 		final Color defaultColor = parseColorOrDefault(c.rendererConfig.defaultNodeColor, null);
 		if(defaultColor == null)
 			throw new RuntimeException("At least the default color must be specified");
-		final Color primaryColor = parseColorOrDefault(c.rendererConfig.primaryGroupNodeColor, defaultColor);
+		final Color group1Color = parseColorOrDefault(c.rendererConfig.group1NodeColor, defaultColor);
+
+		final Color group2Color = parseColorOrDefault(c.rendererConfig.group2NodeColor, defaultColor);
+		final Color mixedColor = parseColorOrDefault(c.rendererConfig.bothGroupsNodeColor, mixColors(group1Color, group2Color));
 		
-		final Color secondaryColor = parseColorOrDefault(c.rendererConfig.secondaryGroupNodeColor, defaultColor);
-		final Color mixedColor = parseColorOrDefault(c.rendererConfig.bothGroupsNodeColor, mixColors(primaryColor, secondaryColor));
-		
-		
-		//System.out.println(mixedColor);
-		
+		final Function<Protein, Color> f = p -> {
+			final boolean isGroup1 = group1.getUniqueProteins().contains(p);
+			final boolean isGroup2 = group2 != null && group2.getUniqueProteins().contains(p);
+			if(isGroup1 && isGroup2) return mixedColor;
+			if(getMultiColoredState(p, group1, group2, graph) != 0) return defaultColor;
+			if(isGroup1) return group1Color;
+			else if(isGroup2) return group2Color;
+			return defaultColor;
+		};
 		if(c.rendererConfig.varyNodeAlphaValues){
 			final int LOWER_ALPHA_BOUND = c.rendererConfig.minNodeAlpha;
 			final int UPPER_ALPHA_BOUND = 255;
 			final double MAXIMUM_NUM = graph.getMaxCount();
-			//System.out.println("Max count of graph: " + MAXIMUM_NUM);
 			return p -> {
-				final boolean isPrimary = primary.getUniqueProteins().contains(p);
-				final boolean isSecondary = secondary != null && secondary.getUniqueProteins().contains(p);
-				final Color color;
-				if(isPrimary && isSecondary) color = mixedColor;
-				else if(isPrimary) color = primaryColor;
-				else if(isSecondary) color = secondaryColor;
-				else color = defaultColor;
+				final Color color = f.apply(p);
 				final int alpha = (int)(LOWER_ALPHA_BOUND + (UPPER_ALPHA_BOUND - LOWER_ALPHA_BOUND) * (double) graph.getCount(p) / MAXIMUM_NUM);
-				
-				//if(p.getGene() != null)
-				//	System.out.println("Node color for " + p.getGene().getSymbol() + ": " + color);
-				//System.out.println(alpha);
-				
 				return new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
 			};
 		}
-		return p -> {
-			final boolean isPrimary = primary.getUniqueProteins().contains(p);
-			final boolean isSecondary = secondary != null && secondary.getUniqueProteins().contains(p);
-			if(isPrimary && isSecondary) return mixedColor;
-			else if(isPrimary) return primaryColor;
-			else if(isSecondary) return secondaryColor;
-			return defaultColor;
-		};
+		return f;
+	}
+	
+	private static int getMultiColoredState(Protein p, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
+		final boolean isGroup1 = group1.getUniqueProteins().contains(p);
+		final boolean isGroup2 = group2 != null && group2.getUniqueProteins().contains(p);
+		if(isGroup1 == isGroup2) return 0;
+		switch(graph.getType()){
+		case GROUP1:
+		case GROUP2:
+			return 0;
+		case GROUP1_MINUS_GROUP2:
+			return isGroup2 ? 2 : 0;
+		case GROUP2_MINUS_GROUP1:
+			return isGroup1 ? 1 : 0;
+		default:
+			return 0;
+		}
 	}
 
-	private static Function<Edge<Protein>, Color> createEdgeColorFunction(Configuration c, GeneSetMap primary, GeneSetMap secondary, LayeredGraph<Protein> graph){
+	private static Function<Edge<Protein>, Color> createEdgeColorFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
 		final int LOWER_ALPHA_BOUND = c.rendererConfig.minEdgeAlpha;
 		final int UPPER_ALPHA_BOUND = 255;
 		final double MAXIMUM_NUM = graph.getMaxCount();
 		if(c.rendererConfig.varyEdgeAlphaValues)
-			return e -> new Color(0, 0, 0, (int)(LOWER_ALPHA_BOUND + (UPPER_ALPHA_BOUND - LOWER_ALPHA_BOUND) * Math.max(graph.getCount(e.getSource()), graph.getCount(e.getTarget())) / MAXIMUM_NUM));
-		return e -> Color.BLACK;
+			return e -> new Color(0, 0, 0, (int)(LOWER_ALPHA_BOUND + (UPPER_ALPHA_BOUND - LOWER_ALPHA_BOUND) * 
+					Math.min(graph.getCount(e.getSource()), graph.getCount(e.getTarget())) / MAXIMUM_NUM));
+			return e -> Color.BLACK;
+	}
+	
+	private static Function<Protein, Color> createNodeBorderColorFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
+		final Color group1Color = parseColorOrDefault(c.rendererConfig.group1NodeColor, Color.BLACK);
+		final Color group2Color = parseColorOrDefault(c.rendererConfig.group2NodeColor, Color.BLACK);
+		final Color[] colors = new Color[]{Color.BLACK, group1Color, group2Color};
+		return p -> {
+			return colors[getMultiColoredState(p, group1, group2, graph)];
+		};
+	}
+	
+	private static Function<Protein, Float> createNodeBorderThicknessFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
+		return p -> {
+			return getMultiColoredState(p, group1, group2, graph) == 0 ? 1f : 3f;
+		};
 	}
 
-	private static Renderer<Protein> createRenderer(Configuration c, GeneSetMap primary, GeneSetMap secondary, LayeredGraph<Protein> graph){
-		final Renderer<Protein> renderer = new GUIRenderer<>(c.rendererConfig, new File(c.generalConfig.imageDirectory));
+	private static Renderer<Protein> createRenderer(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph, String clusterId){
+		final Renderer<Protein> renderer = new GUIRenderer<>(c.rendererConfig, new File(c.generalConfig.outputDirectory, clusterId));
 		renderer.setLabelFunction(p -> p.getGene() == null ? p.getId() : p.getGene().getSymbol());
-		renderer.setNodeColorFunction(createNodeColorFunction(c, primary, secondary, graph));
-		renderer.setEdgeColorFunction(createEdgeColorFunction(c, primary, secondary, graph));
+		renderer.setNodeColorFunction(createNodeColorFunction(c, group1, group2, graph));
+		renderer.setEdgeColorFunction(createEdgeColorFunction(c, group1, group2, graph));
+		renderer.setNodeBorderColorFunction(createNodeBorderColorFunction(c, group1, group2, graph));
+		renderer.setNodeBorderThicknessFunction(createNodeBorderThicknessFunction(c, group1, group2, graph));
 		return renderer;
 	}
 
-	private static void layoutAndRender(Configuration c, GeneSetMap primary, GeneSetMap secondary, String projectNameSuffix) throws IOException {
-		// Render primary (secondary, primary - secondary, secondary - primary)
+	private static void layoutAndRender(Configuration c, GeneSetMap group1, GeneSetMap group2, String clusterId) throws IOException {
+		// Render group1 (group2, group1 - group2, group2 - group1)
 		final List<Tuple<LayeredGraph<Protein>, String>> toRender = new LinkedList<>();
-		
-		final LayeredGraph<Protein> primaryGraph = primary.getLayeredGraph();
-		final LayeredGraph<Protein> primaryGraphReduced = reduceLayeredGraph(primaryGraph, c);
-		if(primaryGraphReduced.getNodes().size() > 0)
-			toRender.add(new Tuple<>(primaryGraphReduced, "Primary"));
+
+		final LayeredGraph<Protein> group1Graph = group1.getLayeredGraph();
+		final LayeredGraph<Protein> group1GraphReduced = reduceLayeredGraph(group1Graph, c);
+		if(group1GraphReduced.getNodes().size() > 0)
+			toRender.add(new Tuple<>(group1GraphReduced, "Group1"));
 
 		//TODO refactor code
-		if(secondary != null){
-			
-			final LayeredGraph<Protein> secondaryGraph = secondary.getLayeredGraph();
-			final LayeredGraph<Protein> secondaryGraphReduced = reduceLayeredGraph(secondaryGraph, c);
-			if(secondaryGraphReduced.getNodes().size() != 0){
-				toRender.add(new Tuple<>(secondaryGraphReduced, "Secondary"));
+		if(group2 != null){
 
-				if(c.analysisConfig.calculateGraphDifferences){
-					final double numPrimary = primary.getGeneSetMap().size();
-					final double numSecondary = secondary.getGeneSetMap().size();
-					final double primaryScalingFactor = numPrimary < numSecondary ? numSecondary / numPrimary : 1;
-					final double secondaryScalingFactor = numSecondary < numPrimary ? numPrimary / numSecondary : 1;
+			final LayeredGraph<Protein> group2Graph = group2.getLayeredGraph();
+			final LayeredGraph<Protein> group2GraphReduced = reduceLayeredGraph(group2Graph, c);
+			if(group2GraphReduced.getNodes().size() != 0){
+				toRender.add(new Tuple<>(group2GraphReduced, "Group2"));
+
+				if(group1.getLayeredGraph().getNodes().size() > 0 &&
+						group2.getLayeredGraph().getNodes().size() > 0 &&
+						c.analysisConfig.calculateGraphDifferences){
+					final double numGroup1 = group1.getGeneSetMap().size();
+					final double numGroup2 = group2.getGeneSetMap().size();
+
+					final double group1ScalingFactor = numGroup1 < numGroup2 ? numGroup2 / numGroup1 : 1;
+					final double group2ScalingFactor = numGroup2 < numGroup1 ? numGroup1 / numGroup2 : 1;
 					
-					
-					final LayeredGraph<Protein> primaryMinusSecondary = reduceLayeredGraph(primaryGraph.subtract(secondaryGraph, primaryScalingFactor, secondaryScalingFactor), c);
-					if(primaryMinusSecondary.getNodes().size() > 0)
-						toRender.add(new Tuple<>(primaryMinusSecondary, "PrimaryMinusSecondary"));
-					final LayeredGraph<Protein> secondaryMinusPrimary = reduceLayeredGraph(secondaryGraph.subtract(primaryGraph, secondaryScalingFactor, primaryScalingFactor), c);
-					if(secondaryMinusPrimary.getNodes().size() > 0)
-						toRender.add(new Tuple<>(secondaryMinusPrimary, "SecondaryMinusPrimary"));
+					final LayeredGraph<Protein> group1MinusGroup2 = reduceLayeredGraph(group1Graph.subtract(group2Graph, group1ScalingFactor, group2ScalingFactor), c);
+					if(group1MinusGroup2.getNodes().size() > 0)
+						toRender.add(new Tuple<>(group1MinusGroup2, "Group1MinusGroup2"));
+					final LayeredGraph<Protein> group2MinusGroup1 = reduceLayeredGraph(group2Graph.subtract(group1Graph, group2ScalingFactor, group1ScalingFactor), c);
+					if(group2MinusGroup1.getNodes().size() > 0)
+						toRender.add(new Tuple<>(group2MinusGroup1, "Group2MinusGroup1"));
 				}
 			}
 		}
 
 		for(Tuple<LayeredGraph<Protein>, String> pair : toRender){
-			new ForceDirectedLayout<>(
-					c.forceDirectedLayoutConfig,
+			final LayeredGraph<Protein> graph = pair.val1();
+
+			if(c.rendererConfig.performRendering){
+				new ForceDirectedLayout<>(
+						c.forceDirectedLayoutConfig,
+						graph,
+						createRenderer(c, group1, group2, pair.val1(), clusterId),
+						c.generalConfig.projectName + clusterId + "_" + pair.val2())
+				.layoutAndRender();
+			}
+
+			saveGraphInformation(
+					c,
+					group1,
+					group2,
 					pair.val1(),
-					createRenderer(c, primary, secondary, pair.val1()),
-					c.generalConfig.projectName + projectNameSuffix + "_" + pair.val2())
-			.layoutAndRender();
+					c.generalConfig.projectName + clusterId + "_" + pair.val2(),
+					clusterId);
+			// 143Patients, C43, _, Group1, _, Interactions
+			// 143Patients, C43, _, Group1, _, GeneSet
 		}
+
+	}
+
+	private static void saveGraphInformation(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph, String name, String clusterId) throws IOException {
+		final File clusterOutputDirectory = new File(c.generalConfig.outputDirectory, clusterId);
+		if(!clusterOutputDirectory.exists()) clusterOutputDirectory.mkdirs();
+		final File interactionsOutputFile = new File(clusterOutputDirectory, name + "_Interactions.txt");
+		final File geneListOutputFile = new File(clusterOutputDirectory, name + "_GeneSet.txt");
+
+		BufferedWriter out = new BufferedWriter(new FileWriter(interactionsOutputFile));
+		out.write("#source\ttarget\tweight (STRING score)");
+		out.newLine();
+		for(Protein p : graph.getNodes()){
+			for(Edge<Protein> e : graph.getNeighbors(p)){
+				out.write(e.getSource().getGene() == null ? e.getSource().getId() : e.getSource().getGene().getSymbol());
+				out.write('\t');
+				out.write(e.getTarget().getGene() == null ? e.getTarget().getId() : e.getTarget().getGene().getSymbol());
+				out.write('\t');
+				out.write(String.valueOf(e.getWeight()));
+				out.newLine();
+			}
+		}
+		out.flush();
+		out.close();
+
+		out = new BufferedWriter(new FileWriter(geneListOutputFile));
+		out.write("#gene\torigin\tcount");
+		out.newLine();
+		for(Protein p : graph.getNodes()){
+			out.write(p.getGene() == null ? p.getId() : p.getGene().getSymbol());
+			out.write('\t');
+			final boolean isGroup1 = group1.getUniqueProteins().contains(p);
+			final boolean isGroup2 = group2.getUniqueProteins().contains(p);
+			final String s;
+			if(isGroup1 && isGroup2)
+				s = "both";
+			else if(isGroup1 && !isGroup2)
+				s = "group1";
+			else if(!isGroup1 && isGroup2)
+				s = "group2";
+			else
+				s = "imputed";
+			out.write(s);
+			out.write('\t');
+			out.write(String.valueOf(graph.getCount(p)));
+			out.newLine();
+		}
+		out.flush();
+		out.close();
 
 	}
 
@@ -391,37 +479,75 @@ public final class NetworkAnalysis {
 		return (double) intersection.size() / union.size();
 	}
 
-	private static double calculateGraphDistance(Graph<Protein> x, Graph<Protein> y){
+	public static double calculateGraphDistance(Graph<Protein> x, Graph<Protein> y){
 		return (1 - calculateIntersectionOverUnionSimilarity(x, y));
 	}
 
-	private static void performClusterAnalysis(Configuration c, GeneSetMap primary, GeneSetMap secondary) {
+	private static void renderAndDisplayDendrogram(Configuration c, GeneSetMap group1, GeneSetMap group2, Map<String, ClusterAnalysis> clusters) throws IOException{
+		final DendrogramRenderer dr = new DendrogramRenderer(c.rendererConfig, new File(c.generalConfig.outputDirectory));
+
+		final Map<PhylogeneticTreeNode, ClusterAnalysis> remapping = new HashMap<>();
+		clusters.forEach((k, v) -> remapping.put(v.getNode(), v));
+
+		final Color defaultColor = parseColorOrDefault(c.rendererConfig.defaultNodeColor, null);
+		if(defaultColor == null)
+			throw new RuntimeException("At least the default color must be specified");
+		final Color group1color = parseColorOrDefault(c.rendererConfig.group1NodeColor, defaultColor);
+		final Color group2color = parseColorOrDefault(c.rendererConfig.group2NodeColor, defaultColor);
+
+		final Function<PhylogeneticTreeNode, Color> clusterEdgeColorFunction = ptn -> {
+			double group1Weight = 0;
+			final PhylogeneticTreeNode[] nodeLeafs = ptn.getLeaves();
+			if(nodeLeafs.length > 0){
+				for(PhylogeneticTreeNode ptnLeaf : nodeLeafs)
+					if(group1.getGeneSetMap().containsKey(ptnLeaf.getLabel()))
+						group1Weight += ptnLeaf.getWeight();
+			}else{
+				group1Weight = group1.getGeneSetMap().containsKey(ptn.getLabel()) ? ptn.getWeight() : 0;
+			}
+			final double percentageGroup1 = group1Weight / ptn.getWeight();
+			if(Math.abs(percentageGroup1 - 0.5) <= 0.1) return Color.BLACK;
+			else if(percentageGroup1 > 0.5) return group1color;
+			else if(percentageGroup1 < 0.5) return group2color;
+			else return Color.BLACK; //never reach here
+		};
+		dr.setClusterEdgeColorFunction(clusterEdgeColorFunction);
+
+		if(c.rendererConfig.colorSignificantBranchLabels){
+			final Function<PhylogeneticTreeNode, Color> clusterLabelColorFunction = ptn -> {
+				return remapping.get(ptn).getpValue() <= c.rendererConfig.significanceThreshold ? Color.RED : Color.BLACK;
+			};
+			dr.setClusterLabelColorFunction(clusterLabelColorFunction);
+		}
+
+		File imageFile = dr.render(clusters, c.generalConfig.projectName + "_Dendrogram");
+		Desktop.getDesktop().open(imageFile);
+	}
+
+	private static void performClusterAnalysis(Configuration c, GeneSetMap group1, GeneSetMap group2) {
 		final Map<String, GeneSet> allPatients = new HashMap<>();
 		final Map<String, PhylogeneticTreeNode> leaves = new HashMap<>();
 
-		//TODO FIXME which weight ratios to use?
-		final double primaryGeneSetSize = primary.getGeneSetMap().size();
-		final double secondaryGeneSetSize = secondary.getGeneSetMap().size();
+		final double group1GeneSetSize = group1.getGeneSetMap().size();
+		final double group2GeneSetSize = group2.getGeneSetMap().size();
 
-		double primaryInitialWeight = primaryGeneSetSize < secondaryGeneSetSize ? secondaryGeneSetSize / primaryGeneSetSize : 1;
-		double secondaryInitialWeight = secondaryGeneSetSize < primaryGeneSetSize ? primaryGeneSetSize / secondaryGeneSetSize : 1;
-		
-		//primaryInitialWeight = secondaryInitialWeight = 1;
+		double group1InitialWeight = group1GeneSetSize < group2GeneSetSize ? group2GeneSetSize / group1GeneSetSize : 1;
+		double group2InitialWeight = group2GeneSetSize < group1GeneSetSize ? group1GeneSetSize / group2GeneSetSize : 1;
 
-		for(String patient : primary.getGeneSetMap().keySet()){
-			allPatients.put(patient, primary.getGeneSetMap().get(patient));
-			leaves.put(patient, new PhylogeneticTreeNode(patient, primaryInitialWeight));
+		for(String patient : group1.getGeneSetMap().keySet()){
+			allPatients.put(patient, group1.getGeneSetMap().get(patient));
+			leaves.put(patient, new PhylogeneticTreeNode(patient, group1InitialWeight));
 		}
-		for(String patient : secondary.getGeneSetMap().keySet()){
-			allPatients.put(patient, secondary.getGeneSetMap().get(patient));
-			leaves.put(patient, new PhylogeneticTreeNode(patient, secondaryInitialWeight));
+		for(String patient : group2.getGeneSetMap().keySet()){
+			allPatients.put(patient, group2.getGeneSetMap().get(patient));
+			leaves.put(patient, new PhylogeneticTreeNode(patient, group2InitialWeight));
 		}
 		final String[] allPatientKeys = allPatients.keySet().toArray(new String[allPatients.size()]);
-		
+
 		if(allPatients.size() == 1){
-			//only 1 patient gene set provided (assumed to be in primary); layout and render that patient
+			//only 1 patient gene set provided (assumed to be in group1); layout and render that patient
 			try {
-				layoutAndRender(c, primary, secondary, allPatientKeys[0]);
+				layoutAndRender(c, group1, group2, allPatientKeys[0]);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -444,126 +570,107 @@ public final class NetworkAnalysis {
 		final PhylogeneticTreeNode treeRoot = PhylogeneticTree.createTreeFromMatrix(dissimilarityMatrix);
 
 		try {
-			final DendrogramRenderer dr = new DendrogramRenderer(c.rendererConfig, new File(c.generalConfig.imageDirectory));
-
-			final Color defaultColor = parseColorOrDefault(c.rendererConfig.defaultNodeColor, null);
-			if(defaultColor == null)
-				throw new RuntimeException("At least the default color must be specified");
-			final Color primaryColor = parseColorOrDefault(c.rendererConfig.primaryGroupNodeColor, defaultColor);
-			final Color secondaryColor = parseColorOrDefault(c.rendererConfig.secondaryGroupNodeColor, defaultColor);
-
-			final Function<PhylogeneticTreeNode, Color> clusterEdgeColorFunction = ptn -> {
-				double primaryWeight = 0;
-				final PhylogeneticTreeNode[] nodeLeafs = ptn.getLeaves();
-				if(nodeLeafs.length > 0){
-					for(PhylogeneticTreeNode ptnLeaf : nodeLeafs)
-						if(primary.getGeneSetMap().containsKey(ptnLeaf.getLabel()))
-							primaryWeight += ptnLeaf.getWeight();
-				}else{
-					primaryWeight = primary.getGeneSetMap().containsKey(ptn.getLabel()) ? ptn.getWeight() : 0;
-				}
-				final double percentagePrimary = primaryWeight / ptn.getWeight();
-				if(percentagePrimary >= 0.5){
-					return colorGradient(Color.BLACK, primaryColor, (percentagePrimary - 0.5) * 2);
-				}else{
-					final double percentageSecondary = 1 - percentagePrimary;
-					return colorGradient(Color.BLACK, secondaryColor, (percentageSecondary - 0.5) * 2);
-				}
-			};
-			dr.setClusterEdgeColorFunction(clusterEdgeColorFunction);
-
-			final Map<String, PhylogeneticTreeNode> clusterMapping = 
-					dr.render(treeRoot, c.generalConfig.projectName + "_Dendrogram");
-
-
-			System.out.println("\n\n\n---INPUT REQUIRED---\nCommand examples:\n"
-					+  allPatientKeys[0] + ": Layout and render the pairwise paths graph of patient " + allPatientKeys[0] + "\n"
-					+ "C5: Layout and render the summary graph of all nodes belonging to C5\n"
-					+ "info C17: Display the phylogenetic tree information for cluster C17\n"
-					+ "q or quit: Terminates the application\n");
-
-			@SuppressWarnings("resource")
-			final Scanner in = new Scanner(System.in);
-			while(true){
-				final String s = in.nextLine().trim();
-				if(s.equalsIgnoreCase("q") || s.equalsIgnoreCase("quit"))
-					System.exit(0);
-
-				if(s.toLowerCase().startsWith("info")){
-					final String id = s.substring(4).trim();
-
-					final PhylogeneticTreeNode ptn = clusterMapping.get(id);
-
-					if(ptn == null){
-						System.out.println(id + " is an invalid cluster identifier...\n");
-						continue;
-					}
-
-					double primaryWeight = 0;
-					final PhylogeneticTreeNode[] nodeLeafs = ptn.getLeaves();
-					for(PhylogeneticTreeNode ptnLeaf : nodeLeafs)
-						if(primary.getGeneSetMap().containsKey(ptnLeaf.getLabel()))
-							primaryWeight += ptnLeaf.getWeight();
-					double maxDissimilarity = 0;
-					for(int i = 0; i < nodeLeafs.length - 1; i++){
-						for(int j = i + 1; j < nodeLeafs.length; j++){
-
-							final Graph<Protein> x = allPatients.get(nodeLeafs[i].getLabel()).getGraph();
-							final Graph<Protein> y = allPatients.get(nodeLeafs[j].getLabel()).getGraph();
-							final double distance = calculateGraphDistance(x, y);
-
-							if(distance > maxDissimilarity)
-								maxDissimilarity = distance;
-
-						}
-					}
-					System.out.println("Information for " + id + ":");
-					System.out.println("\tDepth: " + ((int)(ptn.getDepth() * 100.0)) / 100.0);
-					System.out.println("\tNumber of leaves: " + nodeLeafs.length);
-					//System.out.println("\tTotal weight: " + ptn.getWeight());
-					System.out.println("\tNumber primary: " + Math.round((primaryWeight / primaryInitialWeight)) + " (" + ((int)(primaryWeight * 10000.0 / ptn.getWeight()))/100.0 + "%)");
-					System.out.println("\tNumber secondary: " + Math.round(((ptn.getWeight() - primaryWeight) / secondaryInitialWeight)) + " (" + ((int)((ptn.getWeight() - primaryWeight) * 10000.0 / ptn.getWeight()))/100.0 + "%)"); 
-					System.out.println("\tMax dissimilarity: " + ((int)(maxDissimilarity * 100.0)) / 100.0);
-					System.out.println();
-				}else{
-					final Set<String> patientsToInclude = new HashSet<>();
-					final PhylogeneticTreeNode ptn = clusterMapping.get(s);
-					if(ptn != null){
-						System.out.println("Laying out and rendering graphs from patients in " + s + "...");
-						for(PhylogeneticTreeNode leaf : ptn.getLeaves())
-							patientsToInclude.add(leaf.getLabel());
-					}else{
-						if(primary.getGeneSetMap().containsKey(s) || secondary.getGeneSetMap().containsKey(s)){
-							patientsToInclude.add(s);
-							System.out.println("Laying out and rendering graph for patient " + s + "...");
-						}else{
-							System.out.println(s + " is an invalid cluster or patient identifier...\n");
-							continue;
-						}
-					}
-					
-					
-					System.out.println("All patients to include: " + patientsToInclude);
-					final Set<String> primaryPatientsToInclude = new HashSet<>(patientsToInclude);
-					primaryPatientsToInclude.retainAll(primary.getGeneSetMap().keySet());
-					final Set<String> secondaryPatientsToInclude = new HashSet<>(patientsToInclude);
-					secondaryPatientsToInclude.retainAll(secondary.getGeneSetMap().keySet());
-					System.out.println("Primary patients: " + primaryPatientsToInclude);
-					System.out.println("Secondary patients: " + secondaryPatientsToInclude);
-					
-					final GeneSetMap subsetPrimary = primary.subset(primaryPatientsToInclude);
-					final GeneSetMap subsetSecondary = secondary.subset(secondaryPatientsToInclude);
-					
-					layoutAndRender(c, subsetPrimary, subsetSecondary, s);
-					System.out.println("Done\n");
-				}
-
-			}
+			Map<String, ClusterAnalysis> clusterAnalysisMapping = PhylogeneticTree.recursivelyAnalyzeClusters(treeRoot, dissimilarityMatrix, group1, group2);
+			renderAndDisplayDendrogram(c, group1, group2, clusterAnalysisMapping);
+			saveClusterAnalysesSummary(clusterAnalysisMapping, new File(c.generalConfig.outputDirectory, c.generalConfig.projectName + "_ClusterAnalyses.csv"));
+			handleInput(c, group1, group2, clusterAnalysisMapping);
 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
+	}
+
+	private static String getClusterAnalysesSummaryText(Map<String, ClusterAnalysis> clusterAnalysisMapping){
+		final StringBuilder sb = new StringBuilder(ClusterAnalysis.getCopmactStringHeaders()).append('\n');
+		for(int i = 1; i <= clusterAnalysisMapping.size(); i++)
+			sb.append(clusterAnalysisMapping.get("C" + i).getCompactString()).append('\n');
+		return sb.toString();
+	}
+
+	private static void saveClusterAnalysesSummary(Map<String, ClusterAnalysis> clusterAnalysisMapping, File file) throws IOException {
+		try(final BufferedWriter bw = new BufferedWriter(new FileWriter(file))){
+			for(String line : getClusterAnalysesSummaryText(clusterAnalysisMapping).split("\n")){
+				final String[] parts = line.replace(" | ", "\t").split("\t");
+				for(String part : parts)
+					bw.write('"' + part + "\",");
+				bw.newLine();
+			}
+		}
+
+	}
+
+	private static void handleInput(Configuration c, GeneSetMap group1, GeneSetMap group2,
+			Map<String, ClusterAnalysis> clusterAnalysisMapping){
+		final String patientName = group1.getGeneSetMap().keySet().iterator().next();
+		System.out.println("\n\n\n---INPUT REQUIRED---\nCommand examples:\n"
+				+  patientName + ": Layout and render the pairwise paths graph of patient " + patientName + "\n"
+				+ "C5: Layout and render the summary graph of all nodes belonging to C5\n"
+				+ "info: Displays information for every cluster\n"
+				+ "info C17: Displays information for cluster C17\n"
+				+ "q or quit: Terminates the application\n");
+
+		@SuppressWarnings("resource")
+		final Scanner in = new Scanner(System.in);
+		while(true){
+			final String s = in.nextLine().trim();
+			if(s.equalsIgnoreCase("q") || s.equalsIgnoreCase("quit"))
+				System.exit(0);
+
+			if(s.equalsIgnoreCase("info")){
+				System.out.println(getClusterAnalysesSummaryText(clusterAnalysisMapping));
+
+			}else if(s.toLowerCase().startsWith("info")){
+				final String id = s.substring(4).trim();
+
+				final ClusterAnalysis analysis = clusterAnalysisMapping.get(id);
+				if(analysis == null){
+					System.out.println(id + " is an invalid cluster identifier...\n");
+					continue;
+				}
+				System.out.println(analysis.getPrintableString());
+
+			}else{
+				handleRenderInput(c, group1, group2, clusterAnalysisMapping, s);
+			}
+
+		}
+	}
+
+	private static void handleRenderInput(Configuration c, GeneSetMap group1, GeneSetMap group2, Map<String, ClusterAnalysis> clusterMapping, String id){
+		final Set<String> patientsToInclude = new HashSet<>();
+		final PhylogeneticTreeNode ptn = clusterMapping.get(id).getNode();
+		if(ptn != null){
+			System.out.println("Laying out and rendering graphs from patients in " + id + "...");
+			for(PhylogeneticTreeNode leaf : ptn.getLeaves())
+				patientsToInclude.add(leaf.getLabel());
+		}else{
+			if(group1.getGeneSetMap().containsKey(id) || group2.getGeneSetMap().containsKey(id)){
+				patientsToInclude.add(id);
+				System.out.println("Laying out and rendering graph for patient " + id + "...");
+			}else{
+				System.out.println(id + " is an invalid cluster or patient identifier...\n");
+				return;
+			}
+		}
+
+		final Set<String> group1PatientsToInclude = new HashSet<>(patientsToInclude);
+		group1PatientsToInclude.retainAll(group1.getGeneSetMap().keySet());
+		final Set<String> group2PatientsToInclude = new HashSet<>(patientsToInclude);
+		group2PatientsToInclude.retainAll(group2.getGeneSetMap().keySet());
+		System.out.println("Patients in Group 1: " + group1PatientsToInclude);
+		System.out.println("Patients in Group 2: " + group2PatientsToInclude);
+
+		final GeneSetMap subsetGroup1 = group1.subset(group1PatientsToInclude);
+		final GeneSetMap subsetGroup2 = group2.subset(group2PatientsToInclude);
+
+		try {
+			layoutAndRender(c, subsetGroup1, subsetGroup2, id);
+			System.out.println("Done\n");
+		} catch (IOException e) {
+			System.err.println("Error in attempt to layour and render " + id);
+			e.printStackTrace();
+		}
 	}
 
 }

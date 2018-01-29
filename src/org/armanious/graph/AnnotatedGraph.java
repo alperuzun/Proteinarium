@@ -1,7 +1,5 @@
 package org.armanious.graph;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
 import java.util.HashMap;
 
 public class AnnotatedGraph<K, T extends Comparable<T>> extends Graph<K> {
@@ -36,11 +34,6 @@ public class AnnotatedGraph<K, T extends Comparable<T>> extends Graph<K> {
 	public void clear(){
 		super.clear();
 		annotations.clear();
-	}
-	
-	@Override
-	void saveNodeState(BufferedWriter bw, K node) throws IOException {
-		bw.write(String.valueOf(node) + "\t" + getAnnotation(node));
 	}
 
 }

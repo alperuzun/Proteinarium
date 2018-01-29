@@ -1,9 +1,5 @@
 package org.armanious.graph;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -140,34 +136,6 @@ public class Graph<K> {
 		for(Edge<K> e : edges)
 			g.addEdge(e);
 		return g;
-	}
-
-	void saveNodeState(BufferedWriter bw, K node) throws IOException {
-		bw.write(String.valueOf(node));
-	}
-
-	void saveEdgeState(BufferedWriter bw, Edge<K> edge) throws IOException {
-		bw.write(String.valueOf(edge.getSource()) + "\t" + String.valueOf(edge.getTarget()) + "\t" + String.valueOf(edge.getWeight()));
-	}
-
-	public void saveTo(String file) throws IOException {
-		saveTo(new FileWriter(file));
-	}
-
-	public void saveTo(Writer out) throws IOException {
-		final BufferedWriter bw = out instanceof BufferedWriter ? (BufferedWriter) out : new BufferedWriter(out);
-		for(K node : getNodes()){
-			saveNodeState(bw, node);
-			bw.newLine();
-		}
-		for(K node : getNodes()){
-			for(Edge<K> neighbor : getNeighbors(node)){
-				saveEdgeState(bw, neighbor);
-				bw.newLine();
-			}
-		}
-		bw.flush();
-		bw.close();
 	}
 
 }

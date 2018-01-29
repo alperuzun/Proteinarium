@@ -1,5 +1,7 @@
 package org.armanious.network.analysis;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.armanious.Tuple;
@@ -41,9 +43,21 @@ public class PhylogeneticTree {
 		}
 		return root;
 	}
-
-	/*public String getStringRepresentation() {
-		return root == null ? "" : root.getLabel();
-	}*/
+	
+	public static Map<String, ClusterAnalysis> recursivelyAnalyzeClusters(PhylogeneticTreeNode root, DistanceMatrix<PhylogeneticTreeNode> distances, GeneSetMap group1, GeneSetMap group2){
+		final Map<String, ClusterAnalysis> map = new HashMap<>();
+		final FisherExact fe = new FisherExact(group1.getGeneSetMap().size() + group2.getGeneSetMap().size());
+		recursivelyAnalyzeClusters(root, map, distances, group1, group2, fe, root.getHeight());
+		return map;
+	}
+	
+	private static void recursivelyAnalyzeClusters(PhylogeneticTreeNode root, Map<String, ClusterAnalysis> map, DistanceMatrix<PhylogeneticTreeNode> distances, GeneSetMap group1, GeneSetMap group2, FisherExact fe, double maxHeight){
+		if(root.getLeftChild() == null && root.getRightChild() == null)
+			return;
+		final ClusterAnalysis ca = new ClusterAnalysis("C" + (map.size() + 1), root, distances, group1, group2, fe, maxHeight);
+		map.put(ca.getClusterId(), ca);
+		recursivelyAnalyzeClusters(root.getLeftChild(), map, distances, group1, group2, fe, maxHeight);
+		recursivelyAnalyzeClusters(root.getRightChild(), map, distances, group1, group2, fe, maxHeight);
+	}
 
 }

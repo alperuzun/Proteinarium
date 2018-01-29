@@ -6,7 +6,6 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
@@ -21,13 +20,12 @@ import javax.imageio.ImageIO;
 
 import org.armanious.graph.Edge;
 import org.armanious.network.Configuration.RendererConfig;
-import org.armanious.network.analysis.NetworkAnalysis;
 import org.armanious.network.visualization.ForceDirectedLayout.GraphLayoutData;
 
 public class Renderer<K> {
 	
 	private final RendererConfig rc;
-	private final File imageDirectory;
+	private final File outputDirectory;
 
 	private Function<K, String> labelFunction = k -> String.valueOf(k);
 	private Function<K, Color> labelColorFunction = k -> Color.BLACK;
@@ -41,9 +39,9 @@ public class Renderer<K> {
 	private Function<K, Color> nodeBorderColorFunction = k -> Color.BLACK;
 	private Function<K, Float> nodeBorderThicknessFunction = k -> 1f;
 
-	public Renderer(RendererConfig rc, File imageDirectory){
-		this.imageDirectory = imageDirectory;
-		if(!imageDirectory.exists()) imageDirectory.mkdirs();
+	public Renderer(RendererConfig rc, File outputDirectory){
+		this.outputDirectory = outputDirectory;
+		if(!outputDirectory.exists()) outputDirectory.mkdirs();
 		this.rc = rc;
 	}
 
@@ -83,7 +81,7 @@ public class Renderer<K> {
 		this.nodeBorderThicknessFunction = nodeBorderThicknessFunction;
 	}
 
-	BufferedImage generateBufferedImage(GraphLayoutData<K> data){
+	BufferedImage generateBufferedImage(GraphLayoutData<K> data, String name){
 		// TODO FIXME
 		final double padding = 0.25;
 
@@ -127,18 +125,7 @@ public class Renderer<K> {
 
 		//System.out.println("Attempting to create buffered image with width=" + width + ", height=" + height);
 		final BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-		final Graphics2D g = image.createGraphics();
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-				RenderingHints.VALUE_ANTIALIAS_ON);
-		g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-				RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-		g.setRenderingHint(RenderingHints.KEY_RENDERING,
-				RenderingHints.VALUE_RENDER_QUALITY);
-
-		g.setColor(NetworkAnalysis.parseColorOrDefault(rc.backgroundColor, Color.WHITE));
-		if(rc.transparentBackground) g.setComposite(AlphaComposite.Clear);
-		g.fillRect(0, 0, width, height);
-		g.setComposite(AlphaComposite.SrcOver);
+		final Graphics2D g = RenderingUtils.prepareBufferedImageGraphics(rc, image);
 
 		//TODO cache BasicStroke objects by width
 		for(int i = 0; i < positions.length; i++){
@@ -180,7 +167,7 @@ public class Renderer<K> {
 						(float) (positions[i].y - strHeight * 0.5 + metrics.getAscent()));
 			}
 		}
-		return RenderingUtils.addLegend(rc, image);
+		return RenderingUtils.postProcess(rc, image, name, false);
 	}
 
 	public void handleLayoutIteration(GraphLayoutData<K> data, String name) throws IOException {
@@ -189,9 +176,9 @@ public class Renderer<K> {
 
 	public void handleLayoutFinal(GraphLayoutData<K> data, String name) throws IOException {
 		System.out.println("Generating image of " + name + " for output to file...");
-		final BufferedImage image = generateBufferedImage(data);
+		final BufferedImage image = generateBufferedImage(data, name);
 
-		final File imageFile = new File(imageDirectory, name + "." + rc.imageExtension);
+		final File imageFile = new File(outputDirectory, name + "." + rc.imageExtension);
 
 		final BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(imageFile));
 		ImageIO.write(image, rc.imageExtension, bos);

@@ -9,24 +9,24 @@ public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNo
 	
 	private final String label;
 	private final double weight;
-	private final double depth;
+	private double height;
 	
 	private PhylogeneticTreeNode parent;
 	private PhylogeneticTreeNode left;
 	private PhylogeneticTreeNode right;
-	
+		
 	public PhylogeneticTreeNode(String label, double weight){
 		this(label, weight, 0);
 	}
 	
-	public PhylogeneticTreeNode(String label, double weight, double depth){
+	public PhylogeneticTreeNode(String label, double weight, double height){
 		if(label == null) throw new IllegalArgumentException("Label must not be null");
 		this.label = label;
 		this.weight = weight;
-		this.depth = depth;
+		this.height = height;
 	}
 	
-	public void setParent(PhylogeneticTreeNode parent){
+	private void setParent(PhylogeneticTreeNode parent){
 		this.parent = parent;
 	}
 	
@@ -50,8 +50,8 @@ public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNo
 		return right;
 	}
 	
-	public double getDepth(){
-		return depth;
+	public double getHeight(){
+		return height;
 	}
 	
 	public boolean equals(Object o){

@@ -23,10 +23,10 @@ public final class Configuration {
 	public static final class GeneralConfig {
 
 		public final String activeDirectory;
-		public final String imageDirectory;
+		public final String outputDirectory;
 
-		public final String primaryGeneSetGroupFile;
-		public final String secondaryGeneSetGroupFile;
+		public final String group1GeneSetFile;
+		public final String group2GeneSetFile;
 		public final String projectName;
 
 		public final String proteinInteractomeFile;
@@ -59,33 +59,33 @@ public final class Configuration {
 				activeDirectory += File.separator;
 			this.activeDirectory = activeDirectory;
 
-			String imageDirectory = map.getOrDefault("imageDirectory", activeDirectory + "images");
-			if(!imageDirectory.isEmpty() && !imageDirectory.endsWith(File.separator))
-				imageDirectory += File.separator;
-			if(!new File(imageDirectory).isAbsolute())
-				imageDirectory = activeDirectory + imageDirectory;
-			this.imageDirectory = imageDirectory;
+			String outputDirectory = map.getOrDefault("outputDirectory", activeDirectory + "output");
+			if(!outputDirectory.isEmpty() && !outputDirectory.endsWith(File.separator))
+				outputDirectory += File.separator;
+			if(!new File(outputDirectory).isAbsolute())
+				outputDirectory = activeDirectory + outputDirectory;
+			this.outputDirectory = outputDirectory;
 			
 			
-			String primaryGeneSetGroupFile = map.get("primaryGeneSetGroupFile");
-			if(primaryGeneSetGroupFile != null)
-				if(!new File(primaryGeneSetGroupFile).isAbsolute())
-					primaryGeneSetGroupFile = activeDirectory + primaryGeneSetGroupFile;
-			this.primaryGeneSetGroupFile = primaryGeneSetGroupFile;
+			String group1GeneSetGroupFile = map.get("group1GeneSetFile");
+			if(group1GeneSetGroupFile != null)
+				if(!new File(group1GeneSetGroupFile).isAbsolute())
+					group1GeneSetGroupFile = activeDirectory + group1GeneSetGroupFile;
+			this.group1GeneSetFile = group1GeneSetGroupFile;
 			
-			String secondaryGeneSetGroupFile = map.get("secondaryGeneSetGroupFile");
-			if(secondaryGeneSetGroupFile != null)
-				if(!new File(secondaryGeneSetGroupFile).isAbsolute())
-					secondaryGeneSetGroupFile = activeDirectory + secondaryGeneSetGroupFile;
-			this.secondaryGeneSetGroupFile = secondaryGeneSetGroupFile;
+			String group2GeneSetGroupFile = map.get("group2GeneSetFile");
+			if(group2GeneSetGroupFile != null)
+				if(!new File(group2GeneSetGroupFile).isAbsolute())
+					group2GeneSetGroupFile = activeDirectory + group2GeneSetGroupFile;
+			this.group2GeneSetFile = group2GeneSetGroupFile;
 			
 			
 			String projectName = map.get("projectName");
 			if(projectName == null){
 				if(!activeDirectory.isEmpty()){
 					projectName = new File(activeDirectory).getName();
-				}else if(primaryGeneSetGroupFile != null){
-					projectName = primaryGeneSetGroupFile.contains(".") ? primaryGeneSetGroupFile.substring(0, primaryGeneSetGroupFile.indexOf('.')) : primaryGeneSetGroupFile;
+				}else if(group1GeneSetGroupFile != null){
+					projectName = group1GeneSetGroupFile.contains(".") ? group1GeneSetGroupFile.substring(0, group1GeneSetGroupFile.indexOf('.')) : group1GeneSetGroupFile;
 				}
 			}
 			this.projectName = projectName;
@@ -184,6 +184,8 @@ public final class Configuration {
 	}
 
 	public static final class RendererConfig {
+		
+		public final boolean performRendering;
 
 		public final boolean transparentBackground;
 		public final String imageExtension;
@@ -198,13 +200,20 @@ public final class Configuration {
 		public final String backgroundColor;
 		
 		public final String defaultNodeColor;
-		public final String primaryGroupNodeColor;
-		public final String secondaryGroupNodeColor;
+		public final String group1NodeColor;
+		public final String group2NodeColor;
 		public final String bothGroupsNodeColor;
 		public final boolean varyNodeAlphaValues;
 		public final boolean varyEdgeAlphaValues;
 
+		public final boolean colorSignificantBranchLabels;
+		public final double significanceThreshold;
+
+		public final double metaClusterThreshold;
+
 		public RendererConfig(Map<String, String> map){
+			performRendering = Boolean.parseBoolean(map.getOrDefault("performRendering", "true"));
+			
 			transparentBackground = Boolean.parseBoolean(map.getOrDefault("transparentBackground", "true"));
 			imageExtension = map.getOrDefault("imageExtension", "png");
 			drawGeneSymbols = Boolean.parseBoolean(map.getOrDefault("drawGeneSymbols", "true"));
@@ -218,12 +227,16 @@ public final class Configuration {
 			
 			backgroundColor = map.getOrDefault("backgroundColor", "(255,255,255)");
 			defaultNodeColor = map.getOrDefault("defaultNodeColor", "(255,0,0)"); //red
-			primaryGroupNodeColor = map.getOrDefault("primaryGroupNodeColor", "(255,200,0)"); //orange
-			secondaryGroupNodeColor = map.getOrDefault("secondaryGroupNodeColor", "(0,0,255)"); //blue
+			group1NodeColor = map.getOrDefault("group1NodeColor", "(255,200,0)"); //orange
+			group2NodeColor = map.getOrDefault("group2NodeColor", "(0,0,255)"); //blue
 			bothGroupsNodeColor = map.getOrDefault("bothGroupsNodeColor", "(0,255,0)"); //green
 			varyNodeAlphaValues = Boolean.parseBoolean(map.getOrDefault("varyNodeAlphaValues", "true"));
 			varyEdgeAlphaValues = Boolean.parseBoolean(map.getOrDefault("varyEdgeAlphaValues", "true"));
 
+			colorSignificantBranchLabels = Boolean.parseBoolean(map.getOrDefault("colorSignificantBranchLabels", "true"));
+			significanceThreshold = Double.parseDouble(map.getOrDefault("significanceThreshold", "0.05"));
+			
+			metaClusterThreshold = Double.parseDouble(map.getOrDefault("metaClusterThreshold", "0.3333"));
 		}
 
 	}
@@ -249,8 +262,8 @@ public final class Configuration {
 			System.err.println("Warning: unknown parameter " + key + " provided.");
 	}
 
-	public static Configuration defaultConfiguration(String primaryGeneSetGroupFile){
-		return fromArgs("primaryGeneSetGroupFile=" + primaryGeneSetGroupFile);
+	public static Configuration defaultConfiguration(String group1GeneSetFile){
+		return fromArgs("group1GeneSetFile=" + group1GeneSetFile);
 	}
 
 	public static Configuration fromFile(File file) throws IOException {

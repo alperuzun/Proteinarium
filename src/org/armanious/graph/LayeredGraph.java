@@ -4,11 +4,24 @@ import java.util.Collection;
 import java.util.HashSet;
 
 public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
+	
+	public static enum Type {
+		GROUP1,
+		GROUP2,
+		GROUP1_MINUS_GROUP2,
+		GROUP2_MINUS_GROUP1;
+	}
 
+	private final Type type;
 	private double maxCount = 0;
 
-	public LayeredGraph(){
+	public LayeredGraph(Type type){
 		super(0D);
+		this.type = type;
+	}
+	
+	public Type getType(){
+		return type;
 	}
 
 	@Override
@@ -44,8 +57,10 @@ public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
 
 	//TODO edge-based layered graph
 	public LayeredGraph<K> subtract(LayeredGraph<K> lg, double lhsFactor, double rhsFactor){
-		
-		final LayeredGraph<K> result = new LayeredGraph<>();
+		assert(type == Type.GROUP1 || type == Type.GROUP2);
+		assert(lg.type == Type.GROUP1 || lg.type == Type.GROUP2);
+		assert(type != lg.type);
+		final LayeredGraph<K> result = new LayeredGraph<>(type == Type.GROUP1 ? Type.GROUP1_MINUS_GROUP2 : Type.GROUP2_MINUS_GROUP1);
 		final HashSet<K> toRetain = new HashSet<>();
 		
 		for(K node : getNodes())

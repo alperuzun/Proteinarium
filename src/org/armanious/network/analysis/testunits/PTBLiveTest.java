@@ -229,8 +229,8 @@ public class PTBLiveTest {
 				}
 			}
 			final Configuration c = Configuration.fromArgs(new String[]{
-					"primaryGeneSetGroupFile=ptbCases.txt",
-					"secondaryGeneSetGroupFile=ptbControls.txt",
+					"group1GeneSetFile=ptbCases.txt",
+					"group2GeneSetFile=ptbControls.txt",
 					"maxPathUnconfidence=200",
 					"maxPathLength=3",
 					"percentageOfNodesToRender=1",
@@ -257,8 +257,8 @@ public class PTBLiveTest {
 	public static void main_(String...args) throws IOException{
 		//Gene.initializeGeneDatabase(new File("/Users/david/PycharmProjects/NetworkAnalysis/9606.protein.aliases.v10.5.hgnc_with_symbol.txt"));
 		final Configuration c = Configuration.fromArgs(new String[]{
-				"primaryGeneSetGroupFile=ptbCases.txt",
-				"secondaryGeneSetGroupFile=ptbControls.txt",
+				"group1GeneSetFile=ptbCases.txt",
+				"group2GeneSetFile=ptbControls.txt",
 				"maxPathUnconfidence=200",
 				"maxPathLength=3",
 				"percentageOfNodesToRender=1",
