@@ -48,12 +48,13 @@ public class PhylogeneticTree {
 		final Map<String, ClusterAnalysis> map = new HashMap<>();
 		final FisherExact fe = new FisherExact(group1.getGeneSetMap().size() + group2.getGeneSetMap().size());
 		recursivelyAnalyzeClusters(root, map, distances, group1, group2, fe, root.getHeight());
+		for(PhylogeneticTreeNode ptn : root.getLeaves())
+			map.put(ptn.getLabel(), new ClusterAnalysis(ptn.getLabel(), ptn, distances, group1, group2, fe, root.getHeight()));
 		return map;
 	}
 	
 	private static void recursivelyAnalyzeClusters(PhylogeneticTreeNode root, Map<String, ClusterAnalysis> map, DistanceMatrix<PhylogeneticTreeNode> distances, GeneSetMap group1, GeneSetMap group2, FisherExact fe, double maxHeight){
-		if(root.getLeftChild() == null && root.getRightChild() == null)
-			return;
+		if(root.getLeaves().length == 0) return;
 		final ClusterAnalysis ca = new ClusterAnalysis("C" + (map.size() + 1), root, distances, group1, group2, fe, maxHeight);
 		map.put(ca.getClusterId(), ca);
 		recursivelyAnalyzeClusters(root.getLeftChild(), map, distances, group1, group2, fe, maxHeight);

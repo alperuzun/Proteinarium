@@ -25,8 +25,13 @@ public class GeneSet {
 		proteinSet = new HashSet<>();
 		for(String symbol : symbols){
 			final Gene gene = geneDatabase.apply(symbol);
-			geneSet.add(gene);
-			proteinSet.addAll(gene.getProteins());
+			if(gene != null){
+				geneSet.add(gene);
+				proteinSet.addAll(gene.getProteins());
+			}else{
+				System.err.println("[WARNING]: Cannot find gene " + symbol + " in STRING's database..." + 
+						"\n\tConsider using the official HGNC symbol.");
+			}
 		}
 		graph = new Graph<>();
 		//pairwisePathMap = new HashSet<>();
@@ -56,7 +61,7 @@ public class GeneSet {
 		//return pairwisePathMap;
 	//}
 	
-	public void computePairwisePathsAndGraph(Function<Tuple<Protein, Protein>, Path<Protein>> pairwisePathInitializer){
+	public boolean computePairwisePathsAndGraph(Function<Tuple<Protein, Protein>, Path<Protein>> pairwisePathInitializer){
 		graph.clear();
 		final Protein[] endpoints = proteinSet.toArray(new Protein[proteinSet.size()]);
 		for(int i = 0; i < endpoints.length - 1; i++){
@@ -68,6 +73,7 @@ public class GeneSet {
 				}
 			}
 		}
+		return graph.getNodes().size() > 0;
 	}
 	
 }

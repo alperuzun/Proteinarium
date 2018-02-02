@@ -43,10 +43,17 @@ public final class NetworkAnalysis {
 		final Map<String, Gene> geneMap = maps.val1();
 		final Map<String, Protein> proteinMap = maps.val2();
 		Function<String, Gene> database = (symbol) -> geneMap.get(symbol);
+		
+		if(c.generalConfig.group1GeneSetFile == null){
+			System.err.println("group1GeneSetFile must be specified; exiting...");
+			System.exit(1);;
+		}
 		GeneSetMap group1 = GeneSetMap.loadFromFile(c.generalConfig.group1GeneSetFile, database, true);
-		GeneSetMap group2 = c.generalConfig.group2GeneSetFile != null ? GeneSetMap.loadFromFile(c.generalConfig.group2GeneSetFile, database, false) : null;
-		geneMap.clear(); //save some memory before running full program
-		run(c, group1, group2, proteinMap);
+		GeneSetMap group2 = c.generalConfig.group2GeneSetFile != null
+				? GeneSetMap.loadFromFile(c.generalConfig.group2GeneSetFile, database, false)
+						: new GeneSetMap(false);
+				geneMap.clear(); //save some memory before running full program
+				run(c, group1, group2, proteinMap);
 	}
 
 	public static void run(Configuration c, GeneSetMap group1) throws IOException {
@@ -62,12 +69,13 @@ public final class NetworkAnalysis {
 	}
 
 	public static void run(Configuration c, GeneSetMap group1, GeneSetMap group2, Map<String, Protein> proteinMap) throws IOException {
-		if(group2 != null){
-			for(String group1Key : group1.getGeneSetMap().keySet()){
-				if(group2.getGeneSetMap().keySet().contains(group1Key)){
-					System.err.println("Group1 and group2 gene set groups cannot have duplicate identifier: " + group1Key);
-					return;
-				}
+		if(group2 == null)
+			group2 = new GeneSetMap(false);
+
+		for(String group1Key : group1.getGeneSetMap().keySet()){
+			if(group2.getGeneSetMap().keySet().contains(group1Key)){
+				System.err.println("Cannot have duplicate patient identifier: " + group1Key);
+				System.exit(1);
 			}
 		}
 
@@ -191,8 +199,8 @@ public final class NetworkAnalysis {
 		}
 	}
 
-	private static int hits;
-	private static int misses;
+	//private static int hits;
+	//private static int misses;
 	private static void computeAndSaveSetGraphs(Configuration c, GeneSetMap group1, GeneSetMap group2, Map<String, Protein> proteinMap) throws IOException {
 		final File dataFile = new File(c.generalConfig.activeDirectory + c.generalConfig.projectName + PROJECT_DATA_SUFFIX);
 		final Map<Protein, Map<Protein, Path<Protein>>> precomputedPaths = new HashMap<>();
@@ -208,7 +216,7 @@ public final class NetworkAnalysis {
 		final Function<Tuple<Protein, Protein>, Path<Protein>> pathfinder = t -> {
 			Path<Protein> path = precomputedPaths.getOrDefault(t.val1(), Collections.emptyMap()).get(t.val2());
 			if(path == null){
-				misses++;
+				//misses++;
 				//System.out.println(t.val1().getId() + "," + t.val2().getId());
 				path = pig.dijkstras(t.val1(), t.val2(), e -> 1000D - e.getWeight(),
 						c.analysisConfig.maxPathCost,
@@ -218,7 +226,7 @@ public final class NetworkAnalysis {
 				//path = new Path<>();
 				addPathToMapHelper(t.val1(), t.val2(), path, precomputedPaths, true);
 			}else{
-				hits++;
+				//hits++;
 				//System.out.println("Found cached path");
 			}
 			//if((hits + misses) % 1000 == 0){
@@ -228,8 +236,7 @@ public final class NetworkAnalysis {
 		};
 
 		group1.computePairwisePathsAndGraph(pathfinder);
-		if(group2 != null)
-			group2.computePairwisePathsAndGraph(pathfinder);
+		group2.computePairwisePathsAndGraph(pathfinder);
 
 
 		//MOD12-2=EPHB2,P4HA2,ARHGEF10L,MYLK,ANGPTL4,SPTA1,ALK,LPA,HCLS1,PLA2G4C,MAP4K1,PRKCA,TBXAS1,ADH6,IQGAP2
@@ -285,32 +292,30 @@ public final class NetworkAnalysis {
 
 		final Color group2Color = parseColorOrDefault(c.rendererConfig.group2NodeColor, defaultColor);
 		final Color mixedColor = parseColorOrDefault(c.rendererConfig.bothGroupsNodeColor, mixColors(group1Color, group2Color));
-		
+
 		final Function<Protein, Color> f = p -> {
 			final boolean isGroup1 = group1.getUniqueProteins().contains(p);
-			final boolean isGroup2 = group2 != null && group2.getUniqueProteins().contains(p);
+			final boolean isGroup2 = group2.getUniqueProteins().contains(p);
 			if(isGroup1 && isGroup2) return mixedColor;
 			if(getMultiColoredState(p, group1, group2, graph) != 0) return defaultColor;
 			if(isGroup1) return group1Color;
 			else if(isGroup2) return group2Color;
 			return defaultColor;
 		};
-		if(c.rendererConfig.varyNodeAlphaValues){
-			final int LOWER_ALPHA_BOUND = c.rendererConfig.minNodeAlpha;
-			final int UPPER_ALPHA_BOUND = 255;
-			final double MAXIMUM_NUM = graph.getMaxCount();
-			return p -> {
-				final Color color = f.apply(p);
-				final int alpha = (int)(LOWER_ALPHA_BOUND + (UPPER_ALPHA_BOUND - LOWER_ALPHA_BOUND) * (double) graph.getCount(p) / MAXIMUM_NUM);
-				return new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
-			};
-		}
-		return f;
+		final int LOWER_ALPHA_BOUND = c.rendererConfig.minNodeAlpha;
+		final int UPPER_ALPHA_BOUND = 255;
+		final double MAXIMUM_NUM = graph.getMaxCount();
+
+		return p -> {
+			final Color color = f.apply(p);
+			final int alpha = (int)(LOWER_ALPHA_BOUND + (UPPER_ALPHA_BOUND - LOWER_ALPHA_BOUND) * (double) graph.getCount(p) / MAXIMUM_NUM);
+			return new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
+		};
 	}
-	
+
 	private static int getMultiColoredState(Protein p, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
 		final boolean isGroup1 = group1.getUniqueProteins().contains(p);
-		final boolean isGroup2 = group2 != null && group2.getUniqueProteins().contains(p);
+		final boolean isGroup2 = group2.getUniqueProteins().contains(p);
 		if(isGroup1 == isGroup2) return 0;
 		switch(graph.getType()){
 		case GROUP1:
@@ -329,12 +334,10 @@ public final class NetworkAnalysis {
 		final int LOWER_ALPHA_BOUND = c.rendererConfig.minEdgeAlpha;
 		final int UPPER_ALPHA_BOUND = 255;
 		final double MAXIMUM_NUM = graph.getMaxCount();
-		if(c.rendererConfig.varyEdgeAlphaValues)
-			return e -> new Color(0, 0, 0, (int)(LOWER_ALPHA_BOUND + (UPPER_ALPHA_BOUND - LOWER_ALPHA_BOUND) * 
-					Math.min(graph.getCount(e.getSource()), graph.getCount(e.getTarget())) / MAXIMUM_NUM));
-			return e -> Color.BLACK;
+		return e -> new Color(0, 0, 0, (int)(LOWER_ALPHA_BOUND + (UPPER_ALPHA_BOUND - LOWER_ALPHA_BOUND) * 
+				Math.min(graph.getCount(e.getSource()), graph.getCount(e.getTarget())) / MAXIMUM_NUM));
 	}
-	
+
 	private static Function<Protein, Color> createNodeBorderColorFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
 		final Color group1Color = parseColorOrDefault(c.rendererConfig.group1NodeColor, Color.BLACK);
 		final Color group2Color = parseColorOrDefault(c.rendererConfig.group2NodeColor, Color.BLACK);
@@ -343,7 +346,7 @@ public final class NetworkAnalysis {
 			return colors[getMultiColoredState(p, group1, group2, graph)];
 		};
 	}
-	
+
 	private static Function<Protein, Float> createNodeBorderThicknessFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
 		return p -> {
 			return getMultiColoredState(p, group1, group2, graph) == 0 ? 1f : 3f;
@@ -351,26 +354,28 @@ public final class NetworkAnalysis {
 	}
 
 	private static Renderer<Protein> createRenderer(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph, String clusterId){
-		final Renderer<Protein> renderer = new GUIRenderer<>(c.rendererConfig, new File(c.generalConfig.outputDirectory, clusterId));
-		renderer.setLabelFunction(p -> p.getGene() == null ? p.getId() : p.getGene().getSymbol());
-		renderer.setNodeColorFunction(createNodeColorFunction(c, group1, group2, graph));
-		renderer.setEdgeColorFunction(createEdgeColorFunction(c, group1, group2, graph));
-		renderer.setNodeBorderColorFunction(createNodeBorderColorFunction(c, group1, group2, graph));
-		renderer.setNodeBorderThicknessFunction(createNodeBorderThicknessFunction(c, group1, group2, graph));
-		return renderer;
+		final Renderer<Protein> renderer = c.rendererConfig.displayRendering
+				? new GUIRenderer<>(c.rendererConfig, new File(c.generalConfig.outputDirectory, clusterId))
+						: new Renderer<>(c.rendererConfig, new File(c.generalConfig.outputDirectory));
+				renderer.setLabelFunction(p -> p.getGene() == null ? p.getId() : p.getGene().getSymbol());
+				renderer.setNodeColorFunction(createNodeColorFunction(c, group1, group2, graph));
+				renderer.setEdgeColorFunction(createEdgeColorFunction(c, group1, group2, graph));
+				renderer.setNodeBorderColorFunction(createNodeBorderColorFunction(c, group1, group2, graph));
+				renderer.setNodeBorderThicknessFunction(createNodeBorderThicknessFunction(c, group1, group2, graph));
+				return renderer;
 	}
 
 	private static void layoutAndRender(Configuration c, GeneSetMap group1, GeneSetMap group2, String clusterId) throws IOException {
 		// Render group1 (group2, group1 - group2, group2 - group1)
 		final List<Tuple<LayeredGraph<Protein>, String>> toRender = new LinkedList<>();
 
-		final LayeredGraph<Protein> group1Graph = group1.getLayeredGraph();
+		final LayeredGraph<Protein> group1Graph = group1.getLayeredGraph();		
 		final LayeredGraph<Protein> group1GraphReduced = reduceLayeredGraph(group1Graph, c);
 		if(group1GraphReduced.getNodes().size() > 0)
 			toRender.add(new Tuple<>(group1GraphReduced, "Group1"));
 
 		//TODO refactor code
-		if(group2 != null){
+		if(group2.getGeneSetMap().size() > 0){
 
 			final LayeredGraph<Protein> group2Graph = group2.getLayeredGraph();
 			final LayeredGraph<Protein> group2GraphReduced = reduceLayeredGraph(group2Graph, c);
@@ -385,7 +390,7 @@ public final class NetworkAnalysis {
 
 					final double group1ScalingFactor = numGroup1 < numGroup2 ? numGroup2 / numGroup1 : 1;
 					final double group2ScalingFactor = numGroup2 < numGroup1 ? numGroup1 / numGroup2 : 1;
-					
+
 					final LayeredGraph<Protein> group1MinusGroup2 = reduceLayeredGraph(group1Graph.subtract(group2Graph, group1ScalingFactor, group2ScalingFactor), c);
 					if(group1MinusGroup2.getNodes().size() > 0)
 						toRender.add(new Tuple<>(group1MinusGroup2, "Group1MinusGroup2"));
@@ -398,15 +403,15 @@ public final class NetworkAnalysis {
 
 		for(Tuple<LayeredGraph<Protein>, String> pair : toRender){
 			final LayeredGraph<Protein> graph = pair.val1();
-
-			if(c.rendererConfig.performRendering){
-				new ForceDirectedLayout<>(
-						c.forceDirectedLayoutConfig,
-						graph,
-						createRenderer(c, group1, group2, pair.val1(), clusterId),
-						c.generalConfig.projectName + clusterId + "_" + pair.val2())
-				.layoutAndRender();
-			}
+			
+			final ForceDirectedLayout<Protein> fdl = new ForceDirectedLayout<>(
+					c.forceDirectedLayoutConfig,
+					graph,
+					createRenderer(c, group1, group2, pair.val1(), clusterId),
+					c.generalConfig.projectName + clusterId + "_" + pair.val2());
+			final Thread t = new Thread(fdl::start);
+			t.setDaemon(false);
+			t.start();
 
 			saveGraphInformation(
 					c,
@@ -521,7 +526,8 @@ public final class NetworkAnalysis {
 		}
 
 		File imageFile = dr.render(clusters, c.generalConfig.projectName + "_Dendrogram");
-		Desktop.getDesktop().open(imageFile);
+		if(c.rendererConfig.displayRendering)
+			Desktop.getDesktop().open(imageFile);
 	}
 
 	private static void performClusterAnalysis(Configuration c, GeneSetMap group1, GeneSetMap group2) {
@@ -543,11 +549,25 @@ public final class NetworkAnalysis {
 			leaves.put(patient, new PhylogeneticTreeNode(patient, group2InitialWeight));
 		}
 		final String[] allPatientKeys = allPatients.keySet().toArray(new String[allPatients.size()]);
-
+		
+		if(allPatients.size() == 0){
+			System.out.println("No patient graphs available...exiting.");
+			return;
+		}
+		
 		if(allPatients.size() == 1){
-			//only 1 patient gene set provided (assumed to be in group1); layout and render that patient
+			//only 1 patient has graphs
 			try {
+				System.out.println("Only 1 patient graph...will render its graph and exit.");
 				layoutAndRender(c, group1, group2, allPatientKeys[0]);
+				if(c.rendererConfig.displayRendering){
+					System.out.println("Press enter to exit...");
+					@SuppressWarnings("resource")
+					final Scanner s = new Scanner(System.in);
+					s.nextLine();
+				}
+
+
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -555,7 +575,7 @@ public final class NetworkAnalysis {
 		}
 
 		final DistanceMatrix<PhylogeneticTreeNode> dissimilarityMatrix = new DistanceMatrix<>();
-
+		
 		for(int i = 0; i < allPatientKeys.length - 1; i++){
 			for(int j = i + 1; j < allPatientKeys.length; j++){
 				final Graph<Protein> x = allPatients.get(allPatientKeys[i]).getGraph();
@@ -568,7 +588,8 @@ public final class NetworkAnalysis {
 			}
 		}
 		final PhylogeneticTreeNode treeRoot = PhylogeneticTree.createTreeFromMatrix(dissimilarityMatrix);
-
+		assert(treeRoot != null);
+		
 		try {
 			Map<String, ClusterAnalysis> clusterAnalysisMapping = PhylogeneticTree.recursivelyAnalyzeClusters(treeRoot, dissimilarityMatrix, group1, group2);
 			renderAndDisplayDendrogram(c, group1, group2, clusterAnalysisMapping);
@@ -582,9 +603,11 @@ public final class NetworkAnalysis {
 	}
 
 	private static String getClusterAnalysesSummaryText(Map<String, ClusterAnalysis> clusterAnalysisMapping){
-		final StringBuilder sb = new StringBuilder(ClusterAnalysis.getCopmactStringHeaders()).append('\n');
-		for(int i = 1; i <= clusterAnalysisMapping.size(); i++)
-			sb.append(clusterAnalysisMapping.get("C" + i).getCompactString()).append('\n');
+		final StringBuilder sb = new StringBuilder(ClusterAnalysis.getCompactStringHeaders()).append('\n');
+		clusterAnalysisMapping.values().stream()
+		.filter(ca -> !ca.isLeaf())
+		.sorted(Comparator.comparing(ca -> Integer.parseInt(ca.getClusterId().substring(1))))
+		.forEach(ca -> sb.append(ca.getCompactString()).append('\n'));
 		return sb.toString();
 	}
 
@@ -615,7 +638,7 @@ public final class NetworkAnalysis {
 		while(true){
 			final String s = in.nextLine().trim();
 			if(s.equalsIgnoreCase("q") || s.equalsIgnoreCase("quit"))
-				System.exit(0);
+				break;
 
 			if(s.equalsIgnoreCase("info")){
 				System.out.println(getClusterAnalysesSummaryText(clusterAnalysisMapping));
@@ -629,7 +652,7 @@ public final class NetworkAnalysis {
 					continue;
 				}
 				System.out.println(analysis.getPrintableString());
-
+				System.out.println();
 			}else{
 				handleRenderInput(c, group1, group2, clusterAnalysisMapping, s);
 			}
@@ -639,19 +662,19 @@ public final class NetworkAnalysis {
 
 	private static void handleRenderInput(Configuration c, GeneSetMap group1, GeneSetMap group2, Map<String, ClusterAnalysis> clusterMapping, String id){
 		final Set<String> patientsToInclude = new HashSet<>();
-		final PhylogeneticTreeNode ptn = clusterMapping.get(id).getNode();
-		if(ptn != null){
+		final ClusterAnalysis ca = clusterMapping.get(id);
+		if(ca != null){
+			final PhylogeneticTreeNode ptn = ca.getNode();
 			System.out.println("Laying out and rendering graphs from patients in " + id + "...");
-			for(PhylogeneticTreeNode leaf : ptn.getLeaves())
-				patientsToInclude.add(leaf.getLabel());
+			final PhylogeneticTreeNode[] leaves = ptn.getLeaves();
+			if(leaves.length > 0)
+				for(PhylogeneticTreeNode leaf : ptn.getLeaves())
+					patientsToInclude.add(leaf.getLabel());
+			else
+				patientsToInclude.add(ptn.getLabel());
 		}else{
-			if(group1.getGeneSetMap().containsKey(id) || group2.getGeneSetMap().containsKey(id)){
-				patientsToInclude.add(id);
-				System.out.println("Laying out and rendering graph for patient " + id + "...");
-			}else{
-				System.out.println(id + " is an invalid cluster or patient identifier...\n");
-				return;
-			}
+			System.out.println(id + " is an invalid cluster or patient identifier...\n");
+			return;
 		}
 
 		final Set<String> group1PatientsToInclude = new HashSet<>(patientsToInclude);
@@ -666,11 +689,26 @@ public final class NetworkAnalysis {
 
 		try {
 			layoutAndRender(c, subsetGroup1, subsetGroup2, id);
-			System.out.println("Done\n");
+			System.out.println("\n");
 		} catch (IOException e) {
-			System.err.println("Error in attempt to layour and render " + id);
+			System.err.println("Error in attempt to layout and render " + id);
 			e.printStackTrace();
 		}
 	}
+
+	/*
+	 * group count
+	 * 
+	 * min width consistent DONE
+	 * test group1 or group2 null DONE
+	 * easier handling of input files (allow no file or empty file --> empty genesetmap) DONE
+	 * FisherExact test ArrayIndexOutOfBounds exception; only FE test when have both cases or controls
+	 * if a patient has no graph (or gene not found), print a warning and exclude that patient from all analyses
+	 * 			explain errors, such as increase path length for a patient with 2 genes but no path between
+	 * 
+	 * TODO: beautify output
+	 * 
+	 * controls11.txt   empty file
+	 */
 
 }

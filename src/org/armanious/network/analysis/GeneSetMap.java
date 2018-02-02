@@ -55,8 +55,17 @@ public class GeneSetMap {
 	}
 	
 	public void computePairwisePathsAndGraph(Function<Tuple<Protein, Protein>, Path<Protein>> pairwisePathInitializer){
-		for(GeneSet geneSet : geneSetMap.values())
-			geneSet.computePairwisePathsAndGraph(pairwisePathInitializer);
+		final Set<String> toRemove = new HashSet<>();
+		for(String patientKey : geneSetMap.keySet()){
+			final GeneSet geneSet = geneSetMap.get(patientKey);
+			if(!geneSet.computePairwisePathsAndGraph(pairwisePathInitializer)){
+				System.err.println("[WARNING] Patient " + patientKey + " has an empty graph; removing from analyses..." +
+						"\n\tThis may be due to insufficient genes for " + patientKey + " or too restrictive path contraints to find a path between any two genes." +
+						"\n\tConsider increasing maxPathLength or maxPathCost options.");
+				toRemove.add(patientKey);
+			}
+		}
+		toRemove.stream().forEach(geneSetMap::remove);
 	}
 	
 	public Map<String, GeneSet> getGeneSetMap(){
@@ -65,14 +74,6 @@ public class GeneSetMap {
 	
 	public LayeredGraph<Protein> getLayeredGraph(){
 		return getLayeredGraph(geneSetMap.keySet());
-	}
-	
-	private static String tmp(Collection<Protein> coll){
-		final StringBuilder sb = new StringBuilder();
-		for(Protein c : coll){
-			sb.append(c.getGene() != null ? c.getGene().getSymbol() : c.getId()).append(", ");
-		}
-		return sb.toString();
 	}
 	
 	public LayeredGraph<Protein> getLayeredGraph(Collection<String> geneSetIdentifiers){
@@ -106,11 +107,17 @@ public class GeneSetMap {
 		try(final BufferedReader br = new BufferedReader(new FileReader(geneSetGroupFile))){
 			String s;
 			while((s = br.readLine()) != null){
+				s = s.trim();
+				if(s.isEmpty()) continue;
 				final int idx = s.indexOf('=');
 				if(idx == -1)
 					throw new RuntimeException("Input gene set file " + geneSetGroupFile + " is not validly formed.");
 				final String[] geneSymbols = s.substring(idx + 1).split(",");
-				geneSetMap.put(s.substring(0, idx), Arrays.asList(geneSymbols));
+				for(int i = 0; i < geneSymbols.length; i++) geneSymbols[i] = geneSymbols[i].trim();
+				if(geneSetMap.put(s.substring(0, idx), Arrays.asList(geneSymbols)) != null){
+					System.err.println("Cannot have duplicate patient identifier: " + s.substring(0, idx));
+					System.exit(1);
+				}
 			}
 		}
 		return new GeneSetMap(geneSetMap, geneDatabase, group1);

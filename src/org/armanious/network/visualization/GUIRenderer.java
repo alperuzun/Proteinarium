@@ -12,6 +12,7 @@ import java.util.Map;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.WindowConstants;
 
 import org.armanious.network.Configuration.RendererConfig;
 import org.armanious.network.visualization.ForceDirectedLayout.GraphLayoutData;
@@ -37,7 +38,8 @@ public class GUIRenderer<K> extends Renderer<K> {
 		RendererPanel panel = frameMap.get(name);
 		if(panel == null){
 			frameMap.put(name, panel = new RendererPanel());
-			final JFrame frame = new JFrame(name);
+			final JFrame frame = new JFrame(name.replace('_', ' '));
+			frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 			frame.setSize(500, 500);
 			frame.setContentPane(panel);
 			frame.setVisible(true);
@@ -60,14 +62,17 @@ public class GUIRenderer<K> extends Renderer<K> {
 		
 		private Image image;
 		
-		public void renderImage(BufferedImage image){
-			this.image = image;
-			repaint();
+		public RendererPanel(){
 			addComponentListener(new ComponentAdapter() {
 				public void componentResized(ComponentEvent e) {
 					repaint();
 				}
 			});
+		}
+		
+		public void renderImage(BufferedImage image){
+			this.image = image;
+			repaint();
 		}
 		
 		@Override

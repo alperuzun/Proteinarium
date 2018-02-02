@@ -34,7 +34,7 @@ public class ForceDirectedLayout<K> {
 		this.name = name;
 	}
 	
-	public void layoutAndRender(){
+	public void start(){
 		long itersRemaining = fdlc.maxIterations;
 		long endTime = fdlc.maxTime;
 

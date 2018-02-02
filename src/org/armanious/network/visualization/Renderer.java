@@ -141,7 +141,7 @@ public class Renderer<K> {
 		}
 		final Ellipse2D.Double node = new Ellipse2D.Double();
 		
-		g.setFont(new Font(rc.fontName, Font.PLAIN, rc.fontSize));
+		g.setFont(new Font("Dialog", Font.PLAIN, 12));
 		final FontMetrics metrics = g.getFontMetrics();
 		
 		for(int i = 0; i < positions.length; i++){
@@ -178,10 +178,10 @@ public class Renderer<K> {
 		System.out.println("Generating image of " + name + " for output to file...");
 		final BufferedImage image = generateBufferedImage(data, name);
 
-		final File imageFile = new File(outputDirectory, name + "." + rc.imageExtension);
+		final File imageFile = new File(outputDirectory, name + ".png");
 
 		final BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(imageFile));
-		ImageIO.write(image, rc.imageExtension, bos);
+		ImageIO.write(image, "png", bos);
 	}
 
 }

@@ -50,6 +50,20 @@ public class RenderingUtils {
 
 	public static BufferedImage appendImage(RendererConfig rc, BufferedImage original,
 			BufferedImage appendage, Direction direction, Justification justification){
+		//TODO auto-reverse call
+		switch(direction){
+		case NORTH:
+		case SOUTH:
+			if(appendage.getWidth() > original.getWidth())
+				return appendImage(rc, appendage, original, direction == Direction.NORTH ? Direction.SOUTH : Direction.NORTH, justification);
+			break;
+		case EAST:
+		case WEST:
+			if(appendage.getHeight() > original.getHeight())
+				return appendImage(rc, appendage, original, direction == Direction.EAST ? Direction.WEST : Direction.EAST, justification);
+			break;
+		}
+		
 		int width = -1;
 		int height = -1;
 		int ox = -1;
@@ -81,7 +95,7 @@ public class RenderingUtils {
 			break;
 		case WEST:
 			width = original.getWidth() + appendage.getWidth();
-			height = Math.max(original.getHeight(), original.getHeight());
+			height = Math.max(original.getHeight(), appendage.getHeight());
 			ox = appendage.getWidth();
 			oy = 0;
 			ax = 0;
@@ -117,8 +131,11 @@ public class RenderingUtils {
 				break;
 			}
 		}
-
-		assert(ox >= 0 && oy >= 0 && ax >= 0 && ay >= 0);
+		
+		if(!(ox >= 0 && oy >= 0 && ax >= 0 && ay >= 0)){
+			System.out.println("direction = " + direction + "\njustification = " + justification + "\nox = " + ox + "\noy = " + oy + "\nax = " + ax + "\nay = " + ay);
+			assert(ox >= 0 && oy >= 0 && ax >= 0 && ay >= 0);
+		}
 
 		final BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		final Graphics2D g = prepareBufferedImageGraphics(rc, bi);
@@ -142,8 +159,8 @@ public class RenderingUtils {
 		g.setRenderingHint(RenderingHints.KEY_RENDERING,
 				RenderingHints.VALUE_RENDER_QUALITY);
 
-		g.setColor(NetworkAnalysis.parseColorOrDefault(rc.backgroundColor, Color.WHITE));
-		if(rc.transparentBackground) g.setComposite(AlphaComposite.Clear);
+		g.setColor(Color.WHITE);
+		g.setComposite(AlphaComposite.Clear);
 		g.fillRect(0, 0, bi.getWidth(), bi.getHeight());
 		g.setComposite(AlphaComposite.SrcOver);
 
@@ -185,7 +202,7 @@ public class RenderingUtils {
 						}
 					}else{
 						final Color c1 = colors[i];
-						final Color c2 = new Color(c1.getRed(), c1.getGreen(), c1.getBlue(), rc.varyNodeAlphaValues ? rc.minNodeAlpha : 255);
+						final Color c2 = new Color(c1.getRed(), c1.getGreen(), c1.getBlue(), rc.minNodeAlpha);
 						g.setPaint(new GradientPaint(
 								LEGEND_BAR_PADDING + LEGEND_BAR_WIDTH * (i + 0.5f), LEGEND_BAR_PADDING,
 								c1,
@@ -224,7 +241,7 @@ public class RenderingUtils {
 	private static final Font TITLE_FONT = new Font("Dialog", Font.PLAIN, 28);
 
 	private static BufferedImage createTitleImage(RendererConfig rc, String title){
-		return createTextImage(rc, title, TITLE_FONT, Color.BLACK);
+		return createTextImage(rc, title.replace('_', ' '), TITLE_FONT, Color.BLACK);
 	}
 
 	private static BufferedImage createTextImage(RendererConfig rc, String text, Font font, Color color){

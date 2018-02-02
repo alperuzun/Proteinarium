@@ -24,11 +24,11 @@ public class Entry {
 		}
 		try {
 			NetworkAnalysis.run(c);
+			System.out.println("Note that all windows must be closed before the program competely terminates.");
 		} catch (IOException e) {
 			System.err.println("Error running NetworkAnaylsis");
 			e.printStackTrace();
 		}
-		System.exit(0);
 	}
 	
 	private static void printUsage(){

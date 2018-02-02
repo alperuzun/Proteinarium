@@ -83,7 +83,6 @@ public class DendrogramRenderer {
 		final Map<PhylogeneticTreeNode, Point2D.Double> positions = new HashMap<>();
 		final PhylogeneticTreeNode[] leaves = simplified ? getMetaClusters(clusters) : clusters.get("C1").getNode().getLeaves();
 		
-		System.out.println(leaves.length + " leaves");
 		final double offsetX = Arrays.stream(leaves).mapToDouble(PhylogeneticTreeNode::getHeight).min().getAsDouble();
 		
 		final Set<PhylogeneticTreeNode> addedToQueueSet = new HashSet<>();
@@ -96,8 +95,6 @@ public class DendrogramRenderer {
 		}
 
 		double minDeltaX = Double.MAX_VALUE;
-		
-		System.out.println("About to enter loop");
 		
 		while(!queue.isEmpty()){
 			final PhylogeneticTreeNode cur = queue.remove();
@@ -125,12 +122,22 @@ public class DendrogramRenderer {
 				queue.add(cur.getParent());
 		}
 
-		final double xMultiplier = X_PADDING / minDeltaX;
+		double xMultiplier = X_PADDING / minDeltaX;
+		double maxX = Double.MIN_VALUE;
 		//System.out.println("minDeltaX: " + minDeltaX + "\npadding: " + xPadding + "\nxMultiplier: " + xMultiplier);
-		for(Point2D.Double point : positions.values())
+		for(Point2D.Double point : positions.values()){
 			point.x *= xMultiplier;
+			if(point.x > maxX)
+				maxX = point.x;
+		}
+		
+		if(maxX < 150){
+			xMultiplier = 150 / maxX;
+			for(Point2D.Double point : positions.values())
+				point.x *= xMultiplier;
+		}
 
-		System.out.println(positions);
+		//System.out.println(positions);
 
 
 		return positions;
@@ -159,7 +166,7 @@ public class DendrogramRenderer {
 		final Queue<PhylogeneticTreeNode> toDraw = new LinkedList<>();
 		toDraw.add(clusters.get("C1").getNode());
 
-		g.setFont(new Font(rc.fontName, Font.PLAIN, rc.fontSize));
+		g.setFont(new Font("Dialog", Font.PLAIN, 12));
 
 		while(!toDraw.isEmpty()){
 			final PhylogeneticTreeNode curNode = toDraw.remove();
@@ -255,9 +262,9 @@ public class DendrogramRenderer {
 
 		if(!outputDirectory.exists()) outputDirectory.mkdirs();
 
-		File imageFile = new File(outputDirectory, name + "." + rc.imageExtension);
+		File imageFile = new File(outputDirectory, name + ".png");
 		BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(imageFile));
-		ImageIO.write(generateDendrogramImage(clusterAnalysis, name, false), rc.imageExtension, bos);
+		ImageIO.write(generateDendrogramImage(clusterAnalysis, name, false), "png", bos);
 
 
 		//imageFile = new File(outputDirectory, name + "_Simplified." + rc.imageExtension);

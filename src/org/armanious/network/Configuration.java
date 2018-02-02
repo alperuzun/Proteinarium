@@ -185,26 +185,17 @@ public final class Configuration {
 
 	public static final class RendererConfig {
 		
-		public final boolean performRendering;
-
-		public final boolean transparentBackground;
-		public final String imageExtension;
-		public final boolean drawGeneSymbols;
-		public final String fontName;
-		public final int fontSize;
-		//public final boolean dynamicallySizedFont = false;
+		public final boolean displayRendering;
 		
 		public final int minNodeAlpha;
 		public final int minEdgeAlpha;
 		
-		public final String backgroundColor;
+		public final boolean drawGeneSymbols;
 		
 		public final String defaultNodeColor;
 		public final String group1NodeColor;
 		public final String group2NodeColor;
 		public final String bothGroupsNodeColor;
-		public final boolean varyNodeAlphaValues;
-		public final boolean varyEdgeAlphaValues;
 
 		public final boolean colorSignificantBranchLabels;
 		public final double significanceThreshold;
@@ -212,26 +203,17 @@ public final class Configuration {
 		public final double metaClusterThreshold;
 
 		public RendererConfig(Map<String, String> map){
-			performRendering = Boolean.parseBoolean(map.getOrDefault("performRendering", "true"));
-			
-			transparentBackground = Boolean.parseBoolean(map.getOrDefault("transparentBackground", "true"));
-			imageExtension = map.getOrDefault("imageExtension", "png");
-			drawGeneSymbols = Boolean.parseBoolean(map.getOrDefault("drawGeneSymbols", "true"));
-			fontName = map.getOrDefault("fontName", "Dialog");
-			fontSize = Integer.parseInt(map.getOrDefault("fontSize", "12"));
-			//dynamicallySizedFont = Boolean.parseBoolean(map.getOrDefault("dynamicallySizedFont", "false"));
-			
+			displayRendering = Boolean.parseBoolean(map.getOrDefault("performRendering", "true"));
 
 			minNodeAlpha = Integer.parseInt(map.getOrDefault("minNodeAlpha", "50"));
 			minEdgeAlpha = Integer.parseInt(map.getOrDefault("minEdgeAlpha", "50"));
 			
-			backgroundColor = map.getOrDefault("backgroundColor", "(255,255,255)");
+			drawGeneSymbols = Boolean.parseBoolean(map.getOrDefault("drawGeneSymbols", "true"));
+			
 			defaultNodeColor = map.getOrDefault("defaultNodeColor", "(255,0,0)"); //red
 			group1NodeColor = map.getOrDefault("group1NodeColor", "(255,200,0)"); //orange
 			group2NodeColor = map.getOrDefault("group2NodeColor", "(0,0,255)"); //blue
 			bothGroupsNodeColor = map.getOrDefault("bothGroupsNodeColor", "(0,255,0)"); //green
-			varyNodeAlphaValues = Boolean.parseBoolean(map.getOrDefault("varyNodeAlphaValues", "true"));
-			varyEdgeAlphaValues = Boolean.parseBoolean(map.getOrDefault("varyEdgeAlphaValues", "true"));
 
 			colorSignificantBranchLabels = Boolean.parseBoolean(map.getOrDefault("colorSignificantBranchLabels", "true"));
 			significanceThreshold = Double.parseDouble(map.getOrDefault("significanceThreshold", "0.05"));
