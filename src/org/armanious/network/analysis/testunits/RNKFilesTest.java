@@ -88,7 +88,7 @@ public class RNKFilesTest {
 			);
 		
 		NetworkAnalysis.run(c);
-		System.exit(0);
+		//System.exit(0);
 	}
 
 }

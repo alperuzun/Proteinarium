@@ -82,51 +82,40 @@ public class Renderer<K> {
 	}
 
 	BufferedImage generateBufferedImage(GraphLayoutData<K> data, String name){
-		// TODO FIXME
-		final double padding = 0.25;
+		final double padding = 0;
 
 		double minX = Double.MAX_VALUE;
 		double minY = Double.MAX_VALUE;
-		double maxX = Double.MIN_VALUE;
-		double maxY = Double.MIN_VALUE;
-		double sumX = 0;
-		double sumY = 0;
 		for(int i = 0; i < data.positions.length; i++){
 			final Point2D.Double pos = data.positions[i];
 			final double radius = data.radii[i];
 			if(pos.x - radius * 2 < minX) minX = pos.x - radius * 2;
-			if(pos.x + radius * 2 > maxX) maxX = pos.x + radius * 2;
 			if(pos.y - radius * 2 < minY) minY = pos.y - radius * 2;
-			if(pos.y + radius * 2 > maxY) maxY = pos.y + radius * 2;
-			sumX += pos.x;
-			sumY += pos.y;
 		}
-		final double centerX = sumX / data.positions.length;
-		final double centerY = sumY / data.positions.length;
-
-		final int width = (int) Math.ceil((maxX - minX) * (1 + padding));
-		final int height = (int) Math.ceil((maxY - minY) * (1 + padding));
-
-		//want half the padding translated
-		final double translationX = width * 0.5 - centerX; 
-		final double translationY = height * 0.5 - centerY;
-
+		
 		final Point2D.Double[] positions = new Point2D.Double[data.positions.length];
+		double maxX = Double.MIN_VALUE;
+		double maxY = Double.MIN_VALUE;
 		for(int i = 0; i < positions.length; i++){
 			final Point2D.Double old = data.positions[i];
-			//invert horizontally to account for graphic's library y-axis
-			positions[i] = new Point2D.Double(old.x + translationX, height - (old.y + translationY));
+			final double radius = data.radii[i];
+			positions[i] = new Point2D.Double(old.x - minX, old.y - minY);
+			if(positions[i].x + radius * 2 > maxX) maxX = positions[i].x + radius * 2;
+			if(positions[i].y + radius * 2 > maxY) maxY = positions[i].y + radius * 2;
 		}
-
+		
+		final double width = maxX;
+		final double height = maxY;
+		
 		if((long) width * height > Integer.MAX_VALUE){
 			System.out.println("Integer overflow error; (" + width + ", " + height + ")");
 			throw new RuntimeException();
 		}
 
 		//System.out.println("Attempting to create buffered image with width=" + width + ", height=" + height);
-		final BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		final BufferedImage image = new BufferedImage((int)(width * (1 + padding)), (int)(height * (1 + padding)), BufferedImage.TYPE_INT_ARGB);
 		final Graphics2D g = RenderingUtils.prepareBufferedImageGraphics(rc, image);
-
+		
 		//TODO cache BasicStroke objects by width
 		for(int i = 0; i < positions.length; i++){
 			final Point2D.Double start = positions[i];

@@ -44,7 +44,7 @@ public class Gene {
 	
 	@Override
 	public int hashCode(){
-		return getSymbol().hashCode() * 71 + getProteins().hashCode();
+		return getSymbol().hashCode();
 	}
 	
 	@Override

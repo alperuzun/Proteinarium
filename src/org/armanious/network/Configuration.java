@@ -32,8 +32,6 @@ public final class Configuration {
 		public final String proteinInteractomeFile;
 		public final String proteinAliasesFile;
 
-		public final boolean verboseOutput;
-
 		// public final boolean multiThreaded = false;
 
 		private static void downloadURLToFile(String urlPath, String file) throws IOException {
@@ -82,7 +80,7 @@ public final class Configuration {
 			
 			String projectName = map.get("projectName");
 			if(projectName == null){
-				if(!activeDirectory.isEmpty()){
+				if(!map.getOrDefault("activeDirectory", "").isEmpty()){
 					projectName = new File(activeDirectory).getName();
 				}else if(group1GeneSetGroupFile != null){
 					projectName = group1GeneSetGroupFile.contains(".") ? group1GeneSetGroupFile.substring(0, group1GeneSetGroupFile.indexOf('.')) : group1GeneSetGroupFile;
@@ -121,9 +119,6 @@ public final class Configuration {
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
-			verboseOutput = Boolean.parseBoolean(map.getOrDefault("verboseOutput", "false"));
-
-			//multiThreaded = Boolean.parseBoolean(map.getOrDefault("multiThreaded", "false"));
 		}
 
 	}
@@ -141,6 +136,8 @@ public final class Configuration {
 		//public final boolean layoutAndRender;
 		public final double fractionOfNodesToRender;
 		public final int maxNodesToRender;
+		
+		public final int bootstrappingRounds;
 
 		public AnalysisConfig(Map<String, String> map){
 			reusePreviousData = Boolean.parseBoolean(map.getOrDefault("reusePreviousData", "true"));
@@ -154,6 +151,8 @@ public final class Configuration {
 			//layoutAndRender = Boolean.parseBoolean(map.getOrDefault("layoutAndRender", "true"));
 			fractionOfNodesToRender = Double.parseDouble(map.getOrDefault("fractionOfNodesToRender", "1"));
 			maxNodesToRender = Integer.parseInt(map.getOrDefault("maxNodesToRender", String.valueOf(Integer.MAX_VALUE)));
+			
+			bootstrappingRounds = Integer.parseInt(map.getOrDefault("bootstrappingRounds", "1000"));
 		}
 
 	}

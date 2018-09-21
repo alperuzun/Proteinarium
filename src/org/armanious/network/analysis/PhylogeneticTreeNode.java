@@ -1,7 +1,11 @@
 package org.armanious.network.analysis;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.Stack;
 
 public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNode> {
 	
@@ -14,6 +18,9 @@ public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNo
 	private PhylogeneticTreeNode parent;
 	private PhylogeneticTreeNode left;
 	private PhylogeneticTreeNode right;
+	
+	private int bootstrappingHits;
+	private int bootstrappingRounds;
 		
 	public PhylogeneticTreeNode(String label, double weight){
 		this(label, weight, 0);
@@ -91,4 +98,46 @@ public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNo
 		right.setParent(this);
 	}
 
+	public double getBootstrappingConfidence() {
+		return this.bootstrappingRounds == 0 ? Double.NaN: 
+			(double) this.bootstrappingHits / this.bootstrappingRounds;
+	}
+	
+	private final String flattenCluster(PhylogeneticTreeNode ptn) {
+		final String[] leaves = ptn.leaves.stream().map(leaf -> leaf.getLabel()).toArray(String[]::new);
+		Arrays.sort(leaves);
+		return String.join(",", leaves);
+	}
+
+	public void updateWithBootstrapRound(PhylogeneticTreeNode bootstrapTree) {		
+		final Set<String> flattenedClusters = new HashSet<>();
+		
+		final Stack<PhylogeneticTreeNode> bootstrapTreeDfs = new Stack<>();
+		if (bootstrapTree != null) bootstrapTreeDfs.push(bootstrapTree);
+		
+		while(!bootstrapTreeDfs.isEmpty()) {
+			final PhylogeneticTreeNode ptn = bootstrapTreeDfs.pop();
+			flattenedClusters.add(flattenCluster(ptn));
+			if(ptn.left != null) bootstrapTreeDfs.push(ptn.left);
+			if(ptn.right != null) bootstrapTreeDfs.push(ptn.right);
+		}
+		
+		final Stack<PhylogeneticTreeNode> realTreeDfs = new Stack<>();
+		realTreeDfs.push(this);
+		
+		while(!realTreeDfs.isEmpty()) {
+			final PhylogeneticTreeNode ptn = realTreeDfs.pop();
+			if(flattenedClusters.contains(flattenCluster(ptn))) ptn.bootstrappingHits++;
+			ptn.bootstrappingRounds++;
+			if(ptn.left != null) realTreeDfs.push(ptn.left);
+			if(ptn.right != null) realTreeDfs.push(ptn.right);
+		}
+		
+	}
+	
+	public PhylogeneticTreeNode clone() {
+		if(left != null || right != null) throw new IllegalArgumentException("Can only clone leaves!");
+		return new PhylogeneticTreeNode(label, weight);
+	}
+	
 }

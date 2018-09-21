@@ -8,8 +8,10 @@ public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
 	public static enum Type {
 		GROUP1,
 		GROUP2,
+		COMBINED,
 		GROUP1_MINUS_GROUP2,
-		GROUP2_MINUS_GROUP1;
+		GROUP2_MINUS_GROUP1,
+		BOOTSTRAP;
 	}
 
 	private final Type type;

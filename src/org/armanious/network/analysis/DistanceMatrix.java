@@ -1,9 +1,11 @@
 package org.armanious.network.analysis;
 
 import java.util.Collections;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 
 import org.armanious.Tuple;
 
@@ -104,11 +106,26 @@ public class DistanceMatrix<T extends Comparable<T>> {
 		return sb.substring(0, sb.length() - 1);
 	}
 	
-	@SuppressWarnings("unchecked")
-	public DistanceMatrix<T> clone(){
+	public DistanceMatrix<T> clone(Function<T, T> cloner){
+		final TreeMap<T, T> cloned = new TreeMap<>();
+		final Function<T, T> getCloned = t -> {
+			T clone = cloned.get(t);
+			if(clone == null) {
+				clone = cloner.apply(t);
+				cloned.put(t, clone);
+			}
+			return clone;
+		};
+		
 		final TreeMap<T, TreeMap<T, Double>> clone = new TreeMap<>();
-		for(T key : matrix.keySet())
-			clone.put(key, (TreeMap<T,Double>) matrix.get(key).clone());
+		for(T key : matrix.keySet()) {
+			final TreeMap<T, Double> subtree = matrix.get(key);
+			final TreeMap<T, Double> subtreeClone = new TreeMap<>();
+			for(Entry<T, Double> entry : matrix.get(key).entrySet()) {
+				subtreeClone.put(getCloned.apply(entry.getKey()), entry.getValue());
+			}
+			clone.put(getCloned.apply(key), subtree);
+		}
 		return new DistanceMatrix<>(clone);
 	}
 

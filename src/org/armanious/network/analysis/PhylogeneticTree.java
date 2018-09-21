@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.armanious.Tuple;
+import org.armanious.network.Configuration;
 
 public class PhylogeneticTree {
 	
@@ -13,8 +14,8 @@ public class PhylogeneticTree {
 	
 	private PhylogeneticTree(){}
 	
-	public static PhylogeneticTreeNode createTreeFromMatrix(DistanceMatrix<PhylogeneticTreeNode> d){
-		d = d.clone();
+	public static PhylogeneticTreeNode createTreeFromMatrix(DistanceMatrix<PhylogeneticTreeNode> distanceMatrix){
+		final DistanceMatrix<PhylogeneticTreeNode> d = distanceMatrix.clone(x -> x.clone());
 		PhylogeneticTreeNode root = null;
 		//leaves = d.getAllEntities();
 		while(!d.isEmpty()){
@@ -44,21 +45,21 @@ public class PhylogeneticTree {
 		return root;
 	}
 	
-	public static Map<String, ClusterAnalysis> recursivelyAnalyzeClusters(PhylogeneticTreeNode root, DistanceMatrix<PhylogeneticTreeNode> distances, GeneSetMap group1, GeneSetMap group2){
+	public static Map<String, ClusterAnalysis> recursivelyAnalyzeClusters(Configuration c, PhylogeneticTreeNode root, DistanceMatrix<PhylogeneticTreeNode> distances, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined){
 		final Map<String, ClusterAnalysis> map = new HashMap<>();
 		final FisherExact fe = new FisherExact(group1.getGeneSetMap().size() + group2.getGeneSetMap().size());
-		recursivelyAnalyzeClusters(root, map, distances, group1, group2, fe, root.getHeight());
+		recursivelyAnalyzeClusters(c, root, map, distances, group1, group2, combined, fe, root.getHeight());
 		for(PhylogeneticTreeNode ptn : root.getLeaves())
-			map.put(ptn.getLabel(), new ClusterAnalysis(ptn.getLabel(), ptn, distances, group1, group2, fe, root.getHeight()));
+			map.put(ptn.getLabel(), new ClusterAnalysis(c, ptn.getLabel(), ptn, distances, group1, group2, combined, fe, root.getHeight()));		
 		return map;
 	}
 	
-	private static void recursivelyAnalyzeClusters(PhylogeneticTreeNode root, Map<String, ClusterAnalysis> map, DistanceMatrix<PhylogeneticTreeNode> distances, GeneSetMap group1, GeneSetMap group2, FisherExact fe, double maxHeight){
+	private static void recursivelyAnalyzeClusters(Configuration c, PhylogeneticTreeNode root, Map<String, ClusterAnalysis> map, DistanceMatrix<PhylogeneticTreeNode> distances, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined, FisherExact fe, double maxHeight){
 		if(root.getLeaves().length == 0) return;
-		final ClusterAnalysis ca = new ClusterAnalysis("C" + (map.size() + 1), root, distances, group1, group2, fe, maxHeight);
+		final ClusterAnalysis ca = new ClusterAnalysis(c, "C" + (map.size() + 1), root, distances, group1, group2, combined, fe, maxHeight);
 		map.put(ca.getClusterId(), ca);
-		recursivelyAnalyzeClusters(root.getLeftChild(), map, distances, group1, group2, fe, maxHeight);
-		recursivelyAnalyzeClusters(root.getRightChild(), map, distances, group1, group2, fe, maxHeight);
+		recursivelyAnalyzeClusters(c, root.getLeftChild(), map, distances, group1, group2, combined, fe, maxHeight);
+		recursivelyAnalyzeClusters(c, root.getRightChild(), map, distances, group1, group2, combined, fe, maxHeight);
 	}
 
 }

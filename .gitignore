@@ -10,3 +10,4 @@
 .classpath
 
 *.txt
+.DS_Store

@@ -29,8 +29,8 @@ public class GeneSet {
 				geneSet.add(gene);
 				proteinSet.addAll(gene.getProteins());
 			}else{
-				System.err.println("[WARNING]: Cannot find gene " + symbol + " in STRING's database..." + 
-						"\n\tConsider using the official HGNC symbol.");
+				System.err.println("[WARNING]: Cannot find gene " + symbol + " in STRING's database. " + 
+						"Consider using the official HGNC symbol.");
 			}
 		}
 		graph = new Graph<>();

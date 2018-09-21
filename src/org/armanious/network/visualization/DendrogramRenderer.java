@@ -21,6 +21,7 @@ import java.util.function.Function;
 
 import javax.imageio.ImageIO;
 
+import org.armanious.Tuple;
 import org.armanious.network.Configuration.RendererConfig;
 import org.armanious.network.analysis.ClusterAnalysis;
 import org.armanious.network.analysis.PhylogeneticTreeNode;
@@ -76,15 +77,15 @@ public class DendrogramRenderer {
 		return metaClusters.toArray(new PhylogeneticTreeNode[metaClusters.size()]);
 	}
 
-	private Map<PhylogeneticTreeNode, Point2D.Double> layout(Map<String, ClusterAnalysis> clusters, boolean simplified){
+	private Tuple<Map<PhylogeneticTreeNode, Point2D.Double>, Double> layout(Map<String, ClusterAnalysis> clusters, boolean simplified){
 		final Map<PhylogeneticTreeNode, ClusterAnalysis> remapping = new HashMap<>();
 		clusters.forEach((k, v) -> remapping.put(v.getNode(), v));
 
 		final Map<PhylogeneticTreeNode, Point2D.Double> positions = new HashMap<>();
 		final PhylogeneticTreeNode[] leaves = simplified ? getMetaClusters(clusters) : clusters.get("C1").getNode().getLeaves();
-		
+
 		final double offsetX = Arrays.stream(leaves).mapToDouble(PhylogeneticTreeNode::getHeight).min().getAsDouble();
-		
+
 		final Set<PhylogeneticTreeNode> addedToQueueSet = new HashSet<>();
 		final Queue<PhylogeneticTreeNode> queue = new LinkedList<>();
 		for(int i = 0; i < leaves.length; i++){
@@ -95,7 +96,7 @@ public class DendrogramRenderer {
 		}
 
 		double minDeltaX = Double.MAX_VALUE;
-		
+
 		while(!queue.isEmpty()){
 			final PhylogeneticTreeNode cur = queue.remove();
 			//System.out.println("Popped " + remapping.get(cur).getClusterId() + " off queue");
@@ -116,13 +117,14 @@ public class DendrogramRenderer {
 			double candidate = point.x - Math.max(l.x, r.x);
 			if(candidate > 0 && candidate < minDeltaX)
 				minDeltaX = candidate;
-			//TODO FIXME BUG: dendrograms are NOT the same for each run
 
 			if(cur.getParent() != null && addedToQueueSet.add(cur.getParent()))
 				queue.add(cur.getParent());
 		}
 
-		double xMultiplier = X_PADDING / minDeltaX;
+		double xMultiplier = Math.min(X_PADDING / minDeltaX, 5000);
+		double mct = rc.metaClusterThreshold * xMultiplier;
+
 		double maxX = Double.MIN_VALUE;
 		//System.out.println("minDeltaX: " + minDeltaX + "\npadding: " + xPadding + "\nxMultiplier: " + xMultiplier);
 		for(Point2D.Double point : positions.values()){
@@ -131,8 +133,10 @@ public class DendrogramRenderer {
 				maxX = point.x;
 		}
 		
+
 		if(maxX < 150){
 			xMultiplier = 150 / maxX;
+			mct *= xMultiplier;
 			for(Point2D.Double point : positions.values())
 				point.x *= xMultiplier;
 		}
@@ -140,15 +144,17 @@ public class DendrogramRenderer {
 		//System.out.println(positions);
 
 
-		return positions;
+		return new Tuple<>(positions, mct);
 	}
 
 	BufferedImage generateDendrogramImage(Map<String, ClusterAnalysis> clusters, String name, boolean simplified){
 		final Map<PhylogeneticTreeNode, ClusterAnalysis> remapping = new HashMap<>();
 		clusters.forEach((k, v) -> remapping.put(v.getNode(), v));
-
-		final Map<PhylogeneticTreeNode, Point2D.Double> locations = layout(clusters, simplified);
 		
+		final Tuple<Map<PhylogeneticTreeNode, Point2D.Double>, Double> locationsAndThreshold = layout(clusters, simplified);
+		final Map<PhylogeneticTreeNode, Point2D.Double> locations = locationsAndThreshold.val1();
+		final double mtc = locationsAndThreshold.val2();
+
 		int maxX = 0;
 		int maxY = 0;
 		for(Point2D.Double point : locations.values()){
@@ -158,7 +164,6 @@ public class DendrogramRenderer {
 		maxX += 30 + X_PADDING * 2; // for labels TODO make smarter
 		maxY += Y_PADDING * 2;
 
-
 		BufferedImage image = new BufferedImage(maxX, maxY, BufferedImage.TYPE_INT_ARGB);
 		final Graphics2D g = RenderingUtils.prepareBufferedImageGraphics(rc, image);
 		g.translate(X_PADDING, Y_PADDING);
@@ -167,7 +172,8 @@ public class DendrogramRenderer {
 		toDraw.add(clusters.get("C1").getNode());
 
 		g.setFont(new Font("Dialog", Font.PLAIN, 12));
-
+		
+		System.out.println("THRESHOLD: " + mtc);
 		while(!toDraw.isEmpty()){
 			final PhylogeneticTreeNode curNode = toDraw.remove();
 			final Point2D.Double cur = locations.get(curNode);
@@ -175,12 +181,15 @@ public class DendrogramRenderer {
 			if(curNode.getLeftChild() == null && curNode.getRightChild() == null){
 
 				g.setColor(Color.BLACK);
-				g.drawString(curNode.getLabel(), (int) (cur.x + X_PADDING), (int) (cur.y - 2));
+				g.drawString(curNode.getLabel(), (int) (cur.x), (int) (cur.y - 2));
 
 			}else{
+				toDraw.add(curNode.getLeftChild());
+				toDraw.add(curNode.getRightChild());
 
 				final Point2D.Double l = locations.get(curNode.getLeftChild());
 				final Point2D.Double r = locations.get(curNode.getRightChild());
+
 
 				final Line2D.Double verticalLine = new Line2D.Double(cur.x, l.y, cur.x, r.y);
 				final Line2D.Double horizontalLine1 = new Line2D.Double(cur.x, l.y, l.x, l.y);
@@ -192,12 +201,16 @@ public class DendrogramRenderer {
 				g.draw(horizontalLine1);
 				g.setColor(clusterEdgeColorFunction.apply(curNode.getRightChild()));
 				g.draw(horizontalLine2);
-				toDraw.add(curNode.getLeftChild());
-				toDraw.add(curNode.getRightChild());
 
-				g.setColor(clusterLabelColorFunction.apply(curNode));
-
-				g.drawString(remapping.get(curNode).getClusterId(), (int) (cur.x + X_PADDING), (int) (cur.y - 2));
+				//if(cur.x > l.x){
+				//if(cur.x > mtc){	
+					g.setColor(clusterLabelColorFunction.apply(curNode));
+					g.drawString(remapping.get(curNode).getClusterId(), (int) (cur.x), (int) (cur.y - 2));
+					final String bootstrappinggConfidence = String.valueOf(Math.round(remapping.get(curNode).getBootstrappingConfidence() * 1000) / 10.0);
+					g.setColor(Color.BLACK);
+					g.drawString(bootstrappinggConfidence, (int) cur.x, (int) cur.y + 10);
+				//}
+				//}
 			}
 
 		}

@@ -19,17 +19,29 @@ import org.armanious.graph.Path;
 
 public class GeneSetMap {
 	
-	private final boolean group1;
+	private final LayeredGraph.Type type;
 	private final Map<String, GeneSet> geneSetMap;
 	private final Set<Gene> uniqueGenes;
 	private final Set<Protein> uniqueProteins;
 	
-	public GeneSetMap(boolean group1){
-		this(Collections.emptyMap(), group1);
+	private GeneSetMap(Map<String, GeneSet> existingMap, LayeredGraph.Type type, boolean unused) {
+		this.type = type;
+		this.geneSetMap = existingMap;
+		this.uniqueGenes = new HashSet<>();
+		this.uniqueProteins = new HashSet<>();
+		
+		for(GeneSet geneSet : existingMap.values()) {
+			uniqueGenes.addAll(geneSet.getGenes());
+			uniqueProteins.addAll(geneSet.getProteins());
+		}
 	}
 	
-	public GeneSetMap(Map<String, ? extends Collection<String>> map, Function<String, Gene> geneDatabase, boolean group1){
-		this.group1 = group1;
+	public GeneSetMap(LayeredGraph.Type type){
+		this(Collections.emptyMap(), type);
+	}
+	
+	public GeneSetMap(Map<String, ? extends Collection<String>> map, Function<String, Gene> geneDatabase, LayeredGraph.Type type){
+		this.type = type;
 		geneSetMap = new HashMap<>();
 		uniqueGenes = new HashSet<>();
 		uniqueProteins = new HashSet<>();
@@ -41,8 +53,8 @@ public class GeneSetMap {
 		}
 	}
 	
-	public GeneSetMap(Map<String, ? extends Collection<Gene>> map, boolean group1){		
-		this.group1 = group1;
+	public GeneSetMap(Map<String, ? extends Collection<Gene>> map, LayeredGraph.Type type){		
+		this.type = type;
 		geneSetMap = new HashMap<>();
 		uniqueGenes = new HashSet<>();
 		uniqueProteins = new HashSet<>();
@@ -77,7 +89,7 @@ public class GeneSetMap {
 	}
 	
 	public LayeredGraph<Protein> getLayeredGraph(Collection<String> geneSetIdentifiers){
-		final LayeredGraph<Protein> graph = new LayeredGraph<>(group1 ? LayeredGraph.Type.GROUP1 : LayeredGraph.Type.GROUP2);
+		final LayeredGraph<Protein> graph = new LayeredGraph<>(type);
 		for(String id : geneSetIdentifiers)
 			graph.addGraph(geneSetMap.get(id).getGraph());
 		return graph;
@@ -92,7 +104,7 @@ public class GeneSetMap {
 	}
 	
 	public GeneSetMap subset(Collection<String> keys){
-		final GeneSetMap gsm = new GeneSetMap(group1);
+		final GeneSetMap gsm = new GeneSetMap(type);
 		for(String key : keys){
 			GeneSet gs = geneSetMap.get(key);
 			gsm.uniqueGenes.addAll(gs.getGenes());
@@ -102,7 +114,7 @@ public class GeneSetMap {
 		return gsm;
 	}
 	
-	public static GeneSetMap loadFromFile(String geneSetGroupFile, Function<String, Gene> geneDatabase, boolean group1) throws IOException {
+	public static GeneSetMap loadFromFile(String geneSetGroupFile, Function<String, Gene> geneDatabase, LayeredGraph.Type type) throws IOException {
 		final Map<String, List<String>> geneSetMap = new HashMap<>();
 		try(final BufferedReader br = new BufferedReader(new FileReader(geneSetGroupFile))){
 			String s;
@@ -120,7 +132,11 @@ public class GeneSetMap {
 				}
 			}
 		}
-		return new GeneSetMap(geneSetMap, geneDatabase, group1);
+		return new GeneSetMap(geneSetMap, geneDatabase, type);
+	}
+	
+	public static GeneSetMap fromExistingMap(Map<String, GeneSet> geneSetMap, LayeredGraph.Type type) {
+		return new GeneSetMap(geneSetMap, type, false);
 	}
 
 }

@@ -8,10 +8,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class Graph<K> {
-	
+		
 	final HashMap<K, HashSet<Edge<K>>> neighbors = new HashMap<>();
 	
 	public void addEdge(Edge<K> edge){
@@ -54,6 +56,10 @@ public class Graph<K> {
 	}
 	
 	public final void addEdge(K src, K target, int weight, boolean bidirectional){
+		if(src == null || target == null)
+			throw new IllegalArgumentException("Both source and target nodes of an edge must be non-null");
+		if(src == target || src.equals(target))
+			throw new IllegalArgumentException("The src and target nodes cannot be the same");
 		addEdge(new Edge<>(src, target, weight));
 		if(bidirectional) addEdge(new Edge<>(target, src, weight));
 	}
@@ -136,6 +142,44 @@ public class Graph<K> {
 		for(Edge<K> e : edges)
 			g.addEdge(e);
 		return g;
+	}
+
+	// implementation of
+	// https://en.wikipedia.org/wiki/Clustering_coefficient#Network_average_clustering_coefficient
+	public double getLocalClusteringCoefficient(K node){
+		final Set<K> neighbors = getNeighbors(node).stream().map(edge -> edge.getTarget()).collect(Collectors.toSet());
+		if(neighbors.size() <= 1) return 0;
+		
+		double triangles = 0;
+		
+		for(K neighbor : neighbors)
+			for(Edge<K> neighborOfNeighbor : getNeighbors(neighbor))
+				if(neighbors.contains(neighborOfNeighbor.getTarget()))
+					triangles++;
+		
+		return triangles / (neighbors.size() * (neighbors.size() - 1));
+	}
+	
+	// implementation of
+	// https://en.wikipedia.org/wiki/Clustering_coefficient#Network_average_clustering_coefficient
+	public double getGlobalClusteringCoefficient(){
+		double sum = 0;
+		final Collection<K> nodes = getNodes();
+		if(nodes.size() == 0) return 0;
+		for(K node : nodes) sum += getLocalClusteringCoefficient(node);
+		return sum / nodes.size();
+	}
+	
+	public static void main(String...args){
+		Graph<String> graph = new Graph<>();
+		for(int i = 0; i < 4; i++){
+			for(int j = 0; j < (1 << i); j++){
+				graph.addEdge(i + "_" + j, String.valueOf(2 * j));
+				graph.addEdge(i + "_" + j, String.valueOf(2 * j + 1));
+			}
+		}
+		
+		System.out.println(graph.getGlobalClusteringCoefficient());
 	}
 
 }

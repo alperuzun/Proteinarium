@@ -198,7 +198,7 @@ public class RenderingUtils {
 							g.drawImage(cur, LEGEND_BAR_PADDING + (LEGEND_BAR_WIDTH + LEGEND_BAR_PADDING) * i, LEGEND_BAR_PADDING, null);
 						} catch (IOException e) {
 							System.err.println("Error reading count_gradient.png; the legend in all images will be affected");
-							e.printStackTrace();
+							return; //e.printStackTrace();
 						}
 					}else{
 						final Color c1 = colors[i];
