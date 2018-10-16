@@ -118,16 +118,16 @@ public class BMatrixAnalysis {
 		
 		final Map<String, Set<Gene>> group1map = new HashMap<>();
 		cases.forEach((k, v) -> group1map.put(k, (Set<Gene>)v.stream().map(s -> new Gene(s)).collect(Collectors.toSet())));
-		final GeneSetMap group1 = new GeneSetMap(group1map, LayeredGraph.Type.GROUP1);
+		final GeneSetMap group1 = new GeneSetMap(group1map, LayeredGraph.Type.GROUP1, Double.MAX_VALUE, Integer.MAX_VALUE);
 		
 		final Map<String, Set<Gene>> group2map = new HashMap<>();
 		controls.forEach((k, v) -> group2map.put(k, (Set<Gene>)v.stream().map(s -> new Gene(s)).collect(Collectors.toSet())));
-		final GeneSetMap group2 = new GeneSetMap(group2map, LayeredGraph.Type.GROUP2);
+		final GeneSetMap group2 = new GeneSetMap(group2map, LayeredGraph.Type.GROUP2, Double.MAX_VALUE, Integer.MAX_VALUE);
 		
 		final Map<String, Set<Gene>> combinedMap = new HashMap<>();
 		combinedMap.putAll(group1map);
 		combinedMap.putAll(group2map);
-		final GeneSetMap combinedGroup = new GeneSetMap(combinedMap, LayeredGraph.Type.COMBINED);
+		final GeneSetMap combinedGroup = new GeneSetMap(combinedMap, LayeredGraph.Type.COMBINED, Double.MAX_VALUE, Integer.MAX_VALUE);
 		
 		Set<String> group1patients = new HashSet<>(group1map.keySet());
 		group1patients.retainAll(group2map.keySet());

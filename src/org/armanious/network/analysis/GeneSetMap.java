@@ -13,9 +13,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.armanious.Tuple;
+import org.armanious.graph.Graph;
 import org.armanious.graph.LayeredGraph;
-import org.armanious.graph.Path;
 
 public class GeneSetMap {
 	
@@ -24,11 +23,16 @@ public class GeneSetMap {
 	private final Set<Gene> uniqueGenes;
 	private final Set<Protein> uniqueProteins;
 	
-	private GeneSetMap(Map<String, GeneSet> existingMap, LayeredGraph.Type type, boolean unused) {
+	private final double maxPathCost;
+	private final int maxPathLength;
+	
+	private GeneSetMap(Map<String, GeneSet> existingMap, LayeredGraph.Type type, boolean unused, double maxPathCost, int maxPathLength) {
 		this.type = type;
 		this.geneSetMap = existingMap;
 		this.uniqueGenes = new HashSet<>();
 		this.uniqueProteins = new HashSet<>();
+		this.maxPathCost = maxPathCost;
+		this.maxPathLength = maxPathLength;
 		
 		for(GeneSet geneSet : existingMap.values()) {
 			uniqueGenes.addAll(geneSet.getGenes());
@@ -36,41 +40,47 @@ public class GeneSetMap {
 		}
 	}
 	
-	public GeneSetMap(LayeredGraph.Type type){
-		this(Collections.emptyMap(), type);
+	public GeneSetMap(LayeredGraph.Type type, double maxPathCost, int maxPathLength){
+		this(Collections.emptyMap(), type, maxPathCost, maxPathLength);
 	}
 	
-	public GeneSetMap(Map<String, ? extends Collection<String>> map, Function<String, Gene> geneDatabase, LayeredGraph.Type type){
+	public GeneSetMap(Map<String, ? extends Collection<String>> map, Function<String, Gene> geneDatabase, LayeredGraph.Type type,
+			double maxPathCost, int maxPathLength){
 		this.type = type;
+		this.maxPathCost = maxPathCost;
+		this.maxPathLength = maxPathLength;
 		geneSetMap = new HashMap<>();
 		uniqueGenes = new HashSet<>();
 		uniqueProteins = new HashSet<>();
 		for(String id : map.keySet()){
-			final GeneSet geneSet = new GeneSet(map.get(id), geneDatabase);
+			final GeneSet geneSet = new GeneSet(map.get(id), geneDatabase, new Graph<>(maxPathCost, maxPathLength));
 			geneSetMap.put(id, geneSet);
 			uniqueGenes.addAll(geneSet.getGenes());
 			uniqueProteins.addAll(geneSet.getProteins());
 		}
 	}
 	
-	public GeneSetMap(Map<String, ? extends Collection<Gene>> map, LayeredGraph.Type type){		
+	public GeneSetMap(Map<String, ? extends Collection<Gene>> map, LayeredGraph.Type type,
+			double maxPathCost, int maxPathLength){		
 		this.type = type;
+		this.maxPathCost = maxPathCost;
+		this.maxPathLength = maxPathLength;
 		geneSetMap = new HashMap<>();
 		uniqueGenes = new HashSet<>();
 		uniqueProteins = new HashSet<>();
 		for(String id : map.keySet()){
-			final GeneSet geneSet = new GeneSet(map.get(id));
+			final GeneSet geneSet = new GeneSet(map.get(id), new Graph<>(maxPathCost, maxPathLength));
 			geneSetMap.put(id, geneSet);
 			uniqueGenes.addAll(geneSet.getGenes());
 			uniqueProteins.addAll(geneSet.getProteins());
 		}
 	}
 	
-	public void computePairwisePathsAndGraph(Function<Tuple<Protein, Protein>, Path<Protein>> pairwisePathInitializer){
+	public void computePairwisePathsAndGraph(Pathfinder<Protein> pathfinder){
 		final Set<String> toRemove = new HashSet<>();
 		for(String patientKey : geneSetMap.keySet()){
 			final GeneSet geneSet = geneSetMap.get(patientKey);
-			if(!geneSet.computePairwisePathsAndGraph(pairwisePathInitializer)){
+			if(!geneSet.computePairwisePathsAndGraph(pathfinder)){
 				System.err.println("[WARNING] Patient " + patientKey + " has an empty graph; removing from analyses..." +
 						"\n\tThis may be due to insufficient genes for " + patientKey + " or too restrictive path contraints to find a path between any two genes." +
 						"\n\tConsider increasing maxPathLength or maxPathCost options.");
@@ -89,7 +99,7 @@ public class GeneSetMap {
 	}
 	
 	public LayeredGraph<Protein> getLayeredGraph(Collection<String> geneSetIdentifiers){
-		final LayeredGraph<Protein> graph = new LayeredGraph<>(type);
+		final LayeredGraph<Protein> graph = new LayeredGraph<>(type, maxPathCost, maxPathLength);
 		for(String id : geneSetIdentifiers)
 			graph.addGraph(geneSetMap.get(id).getGraph());
 		return graph;
@@ -104,7 +114,7 @@ public class GeneSetMap {
 	}
 	
 	public GeneSetMap subset(Collection<String> keys){
-		final GeneSetMap gsm = new GeneSetMap(type);
+		final GeneSetMap gsm = new GeneSetMap(type, this.maxPathCost, this.maxPathLength);
 		for(String key : keys){
 			GeneSet gs = geneSetMap.get(key);
 			gsm.uniqueGenes.addAll(gs.getGenes());
@@ -114,7 +124,8 @@ public class GeneSetMap {
 		return gsm;
 	}
 	
-	public static GeneSetMap loadFromFile(String geneSetGroupFile, Function<String, Gene> geneDatabase, LayeredGraph.Type type) throws IOException {
+	public static GeneSetMap loadFromFile(String geneSetGroupFile, Function<String, Gene> geneDatabase, LayeredGraph.Type type,
+			double maxPathCost, int maxPathLength) throws IOException {
 		final Map<String, List<String>> geneSetMap = new HashMap<>();
 		try(final BufferedReader br = new BufferedReader(new FileReader(geneSetGroupFile))){
 			String s;
@@ -132,11 +143,11 @@ public class GeneSetMap {
 				}
 			}
 		}
-		return new GeneSetMap(geneSetMap, geneDatabase, type);
+		return new GeneSetMap(geneSetMap, geneDatabase, type, maxPathCost, maxPathLength);
 	}
 	
-	public static GeneSetMap fromExistingMap(Map<String, GeneSet> geneSetMap, LayeredGraph.Type type) {
-		return new GeneSetMap(geneSetMap, type, false);
+	public static GeneSetMap fromExistingMap(Map<String, GeneSet> geneSetMap, LayeredGraph.Type type, double maxPathCost, int maxPathLength) {
+		return new GeneSetMap(geneSetMap, type, false, maxPathCost, maxPathLength);
 	}
 
 }

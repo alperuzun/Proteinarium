@@ -17,7 +17,7 @@ import javax.swing.WindowConstants;
 import org.armanious.network.Configuration.RendererConfig;
 import org.armanious.network.visualization.ForceDirectedLayout.GraphLayoutData;
 
-public class GUIRenderer<K> extends Renderer<K> {
+public class GUIRenderer<K extends Comparable<K>> extends Renderer<K> {
 	
 	private final Map<String, RendererPanel> frameMap = new HashMap<>();
 	private final int skipIterations;

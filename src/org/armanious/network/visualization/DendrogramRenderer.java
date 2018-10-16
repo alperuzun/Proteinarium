@@ -7,8 +7,10 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -206,9 +208,12 @@ public class DendrogramRenderer {
 				//if(cur.x > mtc){	
 					g.setColor(clusterLabelColorFunction.apply(curNode));
 					g.drawString(remapping.get(curNode).getClusterId(), (int) (cur.x), (int) (cur.y - 2));
-					final String bootstrappinggConfidence = String.valueOf(Math.round(remapping.get(curNode).getBootstrappingConfidence() * 1000) / 10.0);
-					g.setColor(Color.BLACK);
-					g.drawString(bootstrappinggConfidence, (int) cur.x, (int) cur.y + 10);
+					
+					if(curNode.isBootstrapped()) {
+						final String bootstrappinggConfidence = String.valueOf(Math.round(curNode.getBootstrappingConfidence() * 1000) / 10.0);
+						g.setColor(Color.BLACK);
+						g.drawString(bootstrappinggConfidence, (int) cur.x, (int) cur.y + 10);
+					}
 				//}
 				//}
 			}
@@ -278,12 +283,11 @@ public class DendrogramRenderer {
 		File imageFile = new File(outputDirectory, name + ".png");
 		BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(imageFile));
 		ImageIO.write(generateDendrogramImage(clusterAnalysis, name, false), "png", bos);
-
-
-		//imageFile = new File(outputDirectory, name + "_Simplified." + rc.imageExtension);
-		//bos = new BufferedOutputStream(new FileOutputStream(imageFile));
-		//ImageIO.write(generateDendrogramImage(clusterAnalysis, name, true), rc.imageExtension, bos);
-
+		
+		File dendrogramRepresentationFile = new File(outputDirectory, name + ".txt");
+		try(final BufferedWriter bw = new BufferedWriter(new FileWriter(dendrogramRepresentationFile))) {
+			bw.write(clusterAnalysis.get("C1").getNode().getPhylogeneticTreeString());
+		}
 
 		return imageFile;
 	}

@@ -69,6 +69,20 @@ public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNo
 		return leaves.toArray(new PhylogeneticTreeNode[leaves.size()]);
 	}
 	
+	public String getPhylogeneticTreeString() {
+		assert((left == null) == (right == null));
+		if(left == null || right == null) {
+			return new StringBuilder(label.replace(' ', '_')).append(':').append(height).toString();
+		}
+		return new StringBuilder("(")
+				.append(left.getPhylogeneticTreeString())
+				.append(',')
+				.append(right.getPhylogeneticTreeString())
+				.append("):")
+				.append(height)
+				.toString();
+	}
+	
 	public int hashCode(){
 		return label.hashCode();
 	}
@@ -138,6 +152,10 @@ public final class PhylogeneticTreeNode implements Comparable<PhylogeneticTreeNo
 	public PhylogeneticTreeNode clone() {
 		if(left != null || right != null) throw new IllegalArgumentException("Can only clone leaves!");
 		return new PhylogeneticTreeNode(label, weight);
+	}
+
+	public boolean isBootstrapped() {
+		return bootstrappingRounds > 0;
 	}
 	
 }

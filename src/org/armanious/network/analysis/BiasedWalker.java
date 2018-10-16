@@ -10,7 +10,7 @@ import java.util.Set;
 import org.armanious.graph.Edge;
 import org.armanious.graph.Graph;
 
-public class BiasedWalker<K> {
+public class BiasedWalker<K extends Comparable<K>> {
 
 	private static final Random random = new Random();
 

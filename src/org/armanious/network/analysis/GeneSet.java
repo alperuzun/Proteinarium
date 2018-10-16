@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.armanious.Tuple;
 import org.armanious.graph.Edge;
 import org.armanious.graph.Graph;
 import org.armanious.graph.Path;
@@ -19,7 +18,7 @@ public class GeneSet {
 	
 	private final Graph<Protein> graph;
 	
-	public GeneSet(Collection<String> symbols, Function<String, Gene> geneDatabase){
+	public GeneSet(Collection<String> symbols, Function<String, Gene> geneDatabase, Graph<Protein> graph){
 		assert(symbols.size() > 0);
 		geneSet = new HashSet<>(symbols.size());
 		proteinSet = new HashSet<>();
@@ -33,16 +32,14 @@ public class GeneSet {
 						"Consider using the official HGNC symbol.");
 			}
 		}
-		graph = new Graph<>();
-		//pairwisePathMap = new HashSet<>();
+		this.graph = graph;
 	}
 	
-	public GeneSet(Collection<Gene> genes){		
+	public GeneSet(Collection<Gene> genes, Graph<Protein> graph){		
 		geneSet = new HashSet<>(genes);
 		proteinSet = new HashSet<>();
 		for(Gene gene : geneSet) proteinSet.addAll(gene.getProteins());
-		graph = new Graph<>();
-		//pairwisePathMap = new HashSet<>();
+		this.graph = graph;
 	}
 	
 	public Set<Gene> getGenes(){
@@ -61,13 +58,12 @@ public class GeneSet {
 		//return pairwisePathMap;
 	//}
 	
-	public boolean computePairwisePathsAndGraph(Function<Tuple<Protein, Protein>, Path<Protein>> pairwisePathInitializer){
+	public boolean computePairwisePathsAndGraph(Pathfinder<Protein> pathfinder){
 		graph.clear();
 		final Protein[] endpoints = proteinSet.toArray(new Protein[proteinSet.size()]);
 		for(int i = 0; i < endpoints.length - 1; i++){
 			for(int j = i + 1; j < endpoints.length; j++){
-				final Path<Protein> path = pairwisePathInitializer.apply(new Tuple<>(endpoints[i], endpoints[j]));			
-				//pairwisePathMap.add(path);
+				final Path<Protein> path = pathfinder.findPath(endpoints[i], endpoints[j]);
 				for(Edge<Protein> edge : path.getEdges()){
 					graph.addEdge(edge.getSource(), edge.getTarget(), edge.getWeight(), true);
 				}

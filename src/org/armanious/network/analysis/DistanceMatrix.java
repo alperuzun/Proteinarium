@@ -48,12 +48,15 @@ public class DistanceMatrix<T extends Comparable<T>> {
 	public double getDistance(T a, T b){
 		final T lower;
 		final T upper;
-		if(a.compareTo(b) < 0){
+		final int comparison = a.compareTo(b);
+		if(comparison < 0){
 			lower = a;
 			upper = b;
-		}else{
+		} else if(comparison > 0){
 			lower = b;
 			upper = a;
+		} else {
+			return 0;
 		}
 		return matrix.get(lower).get(upper);
 	}

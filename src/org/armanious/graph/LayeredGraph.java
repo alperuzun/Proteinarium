@@ -3,7 +3,7 @@ package org.armanious.graph;
 import java.util.Collection;
 import java.util.HashSet;
 
-public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
+public final class LayeredGraph<K extends Comparable<K>> extends AnnotatedGraph<K, Double> {
 	
 	public static enum Type {
 		GROUP1,
@@ -17,8 +17,8 @@ public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
 	private final Type type;
 	private double maxCount = 0;
 
-	public LayeredGraph(Type type){
-		super(0D);
+	public LayeredGraph(Type type, double maxPathCost, int maxPathLength){
+		super(0D, maxPathCost, maxPathLength);
 		this.type = type;
 	}
 	
@@ -62,7 +62,7 @@ public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
 		assert(type == Type.GROUP1 || type == Type.GROUP2);
 		assert(lg.type == Type.GROUP1 || lg.type == Type.GROUP2);
 		assert(type != lg.type);
-		final LayeredGraph<K> result = new LayeredGraph<>(type == Type.GROUP1 ? Type.GROUP1_MINUS_GROUP2 : Type.GROUP2_MINUS_GROUP1);
+		final LayeredGraph<K> result = new LayeredGraph<>(type == Type.GROUP1 ? Type.GROUP1_MINUS_GROUP2 : Type.GROUP2_MINUS_GROUP1, maxPathCost, maxPathLength);
 		final HashSet<K> toRetain = new HashSet<>();
 		
 		for(K node : getNodes())
@@ -101,6 +101,11 @@ public final class LayeredGraph<K> extends AnnotatedGraph<K, Double> {
 				lg.setCount(node, getCount(node));
 		}
 		return g;
+	}
+	
+	@Override
+	Graph<K> emptyGraph() {
+		return new LayeredGraph<>(type, maxCount, maxPathLength);
 	}
 
 }

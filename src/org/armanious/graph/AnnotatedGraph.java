@@ -2,12 +2,13 @@ package org.armanious.graph;
 
 import java.util.HashMap;
 
-public class AnnotatedGraph<K, T extends Comparable<T>> extends Graph<K> {
+public class AnnotatedGraph<K extends Comparable<K>, T extends Comparable<T>> extends Graph<K> {
 	
 	private final HashMap<K, T> annotations = new HashMap<>();
 	private final T defaultAnnotation;
 	
-	public AnnotatedGraph(T defaultAnnotation){
+	public AnnotatedGraph(T defaultAnnotation, double maxPathCost, int maxPathLength){
+		super(maxPathCost, maxPathLength);
 		this.defaultAnnotation = defaultAnnotation;
 	}
 	

@@ -14,7 +14,7 @@ import org.armanious.graph.Edge;
 import org.armanious.graph.Graph;
 import org.armanious.network.Configuration.ForceDirectedLayoutConfig;
 
-public class ForceDirectedLayout<K> {
+public class ForceDirectedLayout<K extends Comparable<K>> {
 	
 	private final ForceDirectedLayoutConfig fdlc;
 	private final GraphLayoutData<K> data;
@@ -89,7 +89,7 @@ public class ForceDirectedLayout<K> {
 		calculateOffset(data, magnitude, delta, i, j);
 	}
 	
-	private static <K> void calculateOffset(GraphLayoutData<K> data, double magnitude, Point2D.Double delta, int i, int j){
+	private static <K extends Comparable<K>> void calculateOffset(GraphLayoutData<K> data, double magnitude, Point2D.Double delta, int i, int j){
 		final double dx = data.positions[j].x - data.positions[i].x;
 		final double dy = data.positions[j].y - data.positions[i].y;
 		final double degree = Math.atan2(dy, dx);
@@ -99,7 +99,7 @@ public class ForceDirectedLayout<K> {
 		
 	}
 	
-	protected static class GraphLayoutData<K> { 
+	protected static class GraphLayoutData<K extends Comparable<K>> { 
 		
 		public final K[] nodes;
 		public final int[][] neighbors;

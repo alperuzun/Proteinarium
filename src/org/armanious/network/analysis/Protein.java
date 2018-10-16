@@ -1,6 +1,6 @@
 package org.armanious.network.analysis;
 
-public class Protein {
+public class Protein implements Comparable<Protein> {
 	
 	private final Gene gene;
 	private final String id;
@@ -35,6 +35,11 @@ public class Protein {
 	@Override
 	public int hashCode(){
 		return id.hashCode();
+	}
+
+	@Override
+	public int compareTo(Protein p) {
+		return id.compareTo(p.id);
 	}
 
 }

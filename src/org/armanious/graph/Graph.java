@@ -7,14 +7,25 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class Graph<K> {
+import org.armanious.network.analysis.Pathfinder;
+
+public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		
-	final HashMap<K, HashSet<Edge<K>>> neighbors = new HashMap<>();
+	protected final HashMap<K, HashSet<Edge<K>>> neighbors = new HashMap<>();
+	protected final HashMap<K, HashMap<K, Path<K>>> cachedPaths = new HashMap<>();
+	protected final double maxPathCost;
+	protected final int maxPathLength;
+	
+	public Graph(double maxPathCost, int maxPathLength) {
+		this.maxPathCost = maxPathCost;
+		this.maxPathLength = maxPathLength;
+	}
 	
 	public void addEdge(Edge<K> edge){
 		if(!neighbors.containsKey(edge.getSource())) neighbors.put(edge.getSource(), new HashSet<>());
@@ -122,7 +133,7 @@ public class Graph<K> {
 
 	@Deprecated
 	public Graph<K> subgraphWithNodes(Collection<K> nodes){
-		return subgraphWithNodes(new Graph<>(), nodes);
+		return subgraphWithNodes(new Graph<>(maxPathCost, maxPathLength), nodes);
 	}
 
 	@Deprecated
@@ -135,12 +146,59 @@ public class Graph<K> {
 	}
 	
 	public Graph<K> subgraphWithEdges(Collection<Edge<K>> edges){
-		return subgraphWithEdges(new Graph<>(), edges);
+		return subgraphWithEdges(new Graph<>(maxPathCost, maxPathLength), edges);
 	}
 
 	public <G extends Graph<K>> G subgraphWithEdges(G g, Collection<Edge<K>> edges) {
 		for(Edge<K> e : edges)
 			g.addEdge(e);
+		return g;
+	}
+	
+	int getReductionMetric(K k) {
+		final HashSet<Edge<K>> neighbors = this.neighbors.get(k);
+		return neighbors == null ? 0 : neighbors.size();  // by the degree of the protein
+		// can override in LayeredGraph so that it is the number of patients the protein is found in
+	}
+	
+	Graph<K> emptyGraph() {
+		return new Graph<>(maxPathCost, maxPathLength);
+	}
+	
+	public Graph<K> reduceByPaths(Collection<K> endpoints, int maxNodes) {
+		final Graph<K> g = emptyGraph();
+		if(endpoints.size() < 2) return g;
+		
+		final ArrayList<K> sortedEndpoints = new ArrayList<>(endpoints.size());
+		for(K k : endpoints) {
+			if(neighbors.containsKey(k)) {
+				sortedEndpoints.add(k);
+			}
+		}
+		sortedEndpoints.sort(Comparator.comparingInt(t -> -getReductionMetric(t)));
+		
+		HashSet<K> containedNodes = new HashSet<>();
+		containedNodes.add(sortedEndpoints.get(0));
+		
+		for(int nextEndpointToAdd = 1; nextEndpointToAdd < sortedEndpoints.size(); nextEndpointToAdd++) {
+			final LinkedList<Path<K>> pathsToAdd = new LinkedList<>();
+			final HashSet<K> newNodes = new HashSet<>();
+			for(int prevEndpoint = 0; prevEndpoint < nextEndpointToAdd; prevEndpoint++) {
+				final Path<K> pathToAdd = findPath(sortedEndpoints.get(prevEndpoint), sortedEndpoints.get(nextEndpointToAdd));
+				pathsToAdd.add(pathToAdd);
+				for(Edge<K> edge : pathToAdd.getEdges()) {
+					newNodes.add(edge.getSource());
+					newNodes.add(edge.getTarget());
+				}
+			}
+			if(containedNodes.size() + newNodes.size() > maxNodes) break;
+			for(Path<K> pathToAdd : pathsToAdd) {
+				for(Edge<K> edge : pathToAdd.getEdges()) {
+					g.addEdge(edge);
+				}
+			}
+			containedNodes.addAll(newNodes);
+		}
 		return g;
 	}
 
@@ -170,16 +228,24 @@ public class Graph<K> {
 		return sum / nodes.size();
 	}
 	
-	public static void main(String...args){
-		Graph<String> graph = new Graph<>();
-		for(int i = 0; i < 4; i++){
-			for(int j = 0; j < (1 << i); j++){
-				graph.addEdge(i + "_" + j, String.valueOf(2 * j));
-				graph.addEdge(i + "_" + j, String.valueOf(2 * j + 1));
-			}
+	@Override
+	public Path<K> findPath(K src, K dst) {
+		if(src.compareTo(dst) > 0){
+			K tmp = src;
+			src = dst;
+			dst = tmp;
 		}
+		assert(src.compareTo(dst) <= 0);
 		
-		System.out.println(graph.getGlobalClusteringCoefficient());
+		Path<K> path = cachedPaths.containsKey(src) ? cachedPaths.get(src).get(dst) : null;
+		if(path == null){
+			path = dijkstras(src, dst, e -> 1000D - e.getWeight(), maxPathCost, maxPathLength);
+			
+			HashMap<K, Path<K>> innerMap = cachedPaths.get(src);
+			if(innerMap == null) cachedPaths.put(src, innerMap = new HashMap<>());
+			innerMap.put(dst, path);
+		}
+		return path;
 	}
 
 }

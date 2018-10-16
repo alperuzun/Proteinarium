@@ -9,7 +9,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,7 +25,6 @@ import org.armanious.Tuple;
 import org.armanious.graph.Edge;
 import org.armanious.graph.Graph;
 import org.armanious.graph.LayeredGraph;
-import org.armanious.graph.LayeredGraph.Type;
 import org.armanious.graph.Path;
 import org.armanious.network.Configuration;
 import org.armanious.network.visualization.DendrogramRenderer;
@@ -48,27 +47,29 @@ public final class NetworkAnalysis {
 
 		if(c.generalConfig.group1GeneSetFile == null){
 			System.err.println("group1GeneSetFile must be specified; exiting...");
-			System.exit(1);;
+			System.exit(1);
 		}
-		GeneSetMap group1 = GeneSetMap.loadFromFile(c.generalConfig.group1GeneSetFile, database, LayeredGraph.Type.GROUP1);
+		final double maxPathCost = c.analysisConfig.maxPathCost;
+		final int maxPathLength = c.analysisConfig.maxPathLength;
+		GeneSetMap group1 = GeneSetMap.loadFromFile(c.generalConfig.group1GeneSetFile, database, LayeredGraph.Type.GROUP1, maxPathCost, maxPathLength);
 		GeneSetMap group2;
 		GeneSetMap combined;
 		if(c.generalConfig.group2GeneSetFile != null) {
-			group2 = GeneSetMap.loadFromFile(c.generalConfig.group2GeneSetFile, database, LayeredGraph.Type.GROUP2);
+			group2 = GeneSetMap.loadFromFile(c.generalConfig.group2GeneSetFile, database, LayeredGraph.Type.GROUP2, maxPathCost, maxPathLength);
 			final Map<String, GeneSet> combinedMap = new HashMap<>();
 			combinedMap.putAll(group1.getGeneSetMap());
 			combinedMap.putAll(group2.getGeneSetMap());
-			combined = GeneSetMap.fromExistingMap(combinedMap, LayeredGraph.Type.COMBINED);
+			combined = GeneSetMap.fromExistingMap(combinedMap, LayeredGraph.Type.COMBINED, maxPathCost, maxPathLength);
 		}else {
-			group2 = new GeneSetMap(LayeredGraph.Type.GROUP2);
-			combined = new GeneSetMap(LayeredGraph.Type.COMBINED);
+			group2 = new GeneSetMap(LayeredGraph.Type.GROUP2, maxPathCost, maxPathLength);
+			combined = new GeneSetMap(LayeredGraph.Type.COMBINED, maxPathCost, maxPathLength);
 		}
 
 		run(c, group1, group2, combined, proteinMap);
 	}
 
 	public static void run(Configuration c, GeneSetMap group1) throws IOException {
-		run(c, group1, new GeneSetMap(LayeredGraph.Type.GROUP2));
+		run(c, group1, new GeneSetMap(LayeredGraph.Type.GROUP2, c.analysisConfig.maxPathCost, c.analysisConfig.maxPathLength));
 	}
 
 	public static void run(Configuration c, GeneSetMap group1, GeneSetMap group2) throws IOException {
@@ -77,15 +78,15 @@ public final class NetworkAnalysis {
 		final Map<String, GeneSet> combinedMap = new HashMap<>();
 		combinedMap.putAll(group1.getGeneSetMap());
 		combinedMap.putAll(group2.getGeneSetMap());
-		final GeneSetMap combined = GeneSetMap.fromExistingMap(combinedMap, LayeredGraph.Type.COMBINED);
+		final GeneSetMap combined = GeneSetMap.fromExistingMap(combinedMap, LayeredGraph.Type.COMBINED, c.analysisConfig.maxPathCost, c.analysisConfig.maxPathLength);
 		run(c, group1, group2, combined, proteinMap);
 	}
 
 	public static void run(Configuration c, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined, Map<String, Protein> proteinMap) throws IOException {
 		if(group2 == null)
-			group2 = new GeneSetMap(LayeredGraph.Type.GROUP2);
+			group2 = new GeneSetMap(LayeredGraph.Type.GROUP2, c.analysisConfig.maxPathCost, c.analysisConfig.maxPathLength);
 		if(combined == null)
-			combined = new GeneSetMap(LayeredGraph.Type.COMBINED);
+			combined = new GeneSetMap(LayeredGraph.Type.COMBINED, c.analysisConfig.maxPathCost, c.analysisConfig.maxPathLength);
 
 		for(String group1Key : group1.getGeneSetMap().keySet()){
 			if(group2.getGeneSetMap().keySet().contains(group1Key)){
@@ -93,22 +94,13 @@ public final class NetworkAnalysis {
 				System.exit(1);
 			}
 		}
-
-		final GeneSetMap[] bootstrapGeneSetMaps;
-		if(c.analysisConfig.bootstrappingRounds != 0 && c.analysisConfig.bootstrappingRounds < 100) {
-			System.out.println("If bootstrapping, must specify at least 100 rounds. Skipping bootstrapping...");
-			bootstrapGeneSetMaps = new GeneSetMap[0];
-		} else {
-			bootstrapGeneSetMaps = new GeneSetMap[c.analysisConfig.bootstrappingRounds];
-			sampleForBootstrapping(bootstrapGeneSetMaps, combined);
-		}
 		
 		// load/compute pairwise shortest paths
-		computeAndSaveSetGraphs(c, group1, group2, combined, bootstrapGeneSetMaps, proteinMap);
+		computeAndSaveSetGraphs(c, group1, group2, combined, proteinMap);
 
 
 		// UPGMA
-		performClusterAnalysis(c, group1, group2, combined, bootstrapGeneSetMaps);
+		performClusterAnalysis(c, group1, group2, combined);
 	}
 
 
@@ -145,7 +137,7 @@ public final class NetworkAnalysis {
 		byTargets.put(target, path);
 	}
 
-	private static void savePaths(Configuration c, File file, Map<Protein, Map<Protein, Path<Protein>>> map) throws IOException {
+	private static void savePaths(Configuration c, File file, HashMap<Protein, HashMap<Protein, Path<Protein>>> hashMap) throws IOException {
 		int saved = 0;
 		//final Set<Tuple<Protein, Protein>> checked = new HashSet<>();
 		try(final BufferedWriter bw = new BufferedWriter(new FileWriter(file))){
@@ -154,8 +146,8 @@ public final class NetworkAnalysis {
 			bw.write(String.valueOf(c.analysisConfig.maxPathLength)); bw.newLine();
 			bw.write(String.valueOf(c.analysisConfig.maxPathCost)); bw.newLine();
 
-			for(Protein src : map.keySet()){
-				final Map<Protein, Path<Protein>> byTarget = map.get(src);
+			for(Protein src : hashMap.keySet()){
+				final Map<Protein, Path<Protein>> byTarget = hashMap.get(src);
 				for(Protein target : byTarget.keySet()){
 					assert(src.getId().compareTo(target.getId()) <= 0);
 					//if(!checked.add(new Tuple<>(src, target)) || !checked.add(new Tuple<>(target, src)))
@@ -231,35 +223,10 @@ public final class NetworkAnalysis {
 			System.out.println("Loaded " + count + " paths.");
 		}
 	}
-
-	private static void sampleForBootstrapping(GeneSetMap[] bootstrappedMaps, GeneSetMap combined) {
-		final Set<Gene> uniqueGenes = combined.getUniqueGenes();
-		final int n = uniqueGenes.size();
-		final double probability = 1 - Math.pow(((double) n - 1) / n, n);
-		final Random random = new Random();
-		
-		final Map<String, GeneSet> combinedMap = combined.getGeneSetMap();
-		for(int i = 0; i < bootstrappedMaps.length; i++) {
-			final Map<String, Set<Gene>> gsm = new HashMap<>();
-			for(String patient : combinedMap.keySet()) {
-				gsm.put(patient, new HashSet<>());
-			}
-			for(Gene gene : uniqueGenes) {
-				if(random.nextDouble() <= probability) {
-					for(String patient : combinedMap.keySet()) {
-						if(combinedMap.get(patient).getGenes().contains(gene)) {
-							gsm.get(patient).add(gene);
-						}
-					}
-				}
-			}
-			bootstrappedMaps[i] = new GeneSetMap(gsm, Type.BOOTSTRAP);
-		}
-	}
-
+	
 	//private static int hits;
 	//private static int misses;
-	private static void computeAndSaveSetGraphs(Configuration c, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined, GeneSetMap[] bootstrapGeneSetMaps, Map<String, Protein> proteinMap) throws IOException {
+	private static void computeAndSaveSetGraphs(Configuration c, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined, Map<String, Protein> proteinMap) throws IOException {
 		final File dataFile = new File(c.generalConfig.activeDirectory + c.generalConfig.projectName + PROJECT_DATA_SUFFIX);
 		final Map<Protein, Map<Protein, Path<Protein>>> precomputedPaths = new HashMap<>();
 		if(c.analysisConfig.reusePreviousData && dataFile.exists())
@@ -269,36 +236,13 @@ public final class NetworkAnalysis {
 		ProteinInteractionGraph pig = new ProteinInteractionGraph(
 				Math.max(1000D - c.analysisConfig.maxPathCost, c.analysisConfig.minInteractomeConfidence),
 				c.generalConfig.proteinInteractomeFile,
-				proteinMap);
+				proteinMap, c.analysisConfig.maxPathCost, c.analysisConfig.maxPathLength);
+		pig.updatePaths(precomputedPaths);
 		// TODO double check Dijkstra' returning null
-		final Function<Tuple<Protein, Protein>, Path<Protein>> pathfinder = t -> {
-			final Protein start, end;
-			if(t.val1().getId().compareTo(t.val2().getId()) > 0){
-				start = t.val2();
-				end = t.val1();
-			}else{
-				start = t.val1();
-				end = t.val2();
-			}
-			assert(start.getId().compareTo(end.getId()) <= 0);
-			Path<Protein> path = precomputedPaths.getOrDefault(start, Collections.emptyMap()).get(end);
-			if(path == null){
-				path = pig.dijkstras(start, end, e -> 1000D - e.getWeight(),
-						c.analysisConfig.maxPathCost,
-						c.analysisConfig.maxPathLength);
-				addPathToMapHelper(start, end, path, precomputedPaths);
-			}
-			return path;
-		};
 		System.out.println("Computing pairwise paths...");
-		group1.computePairwisePathsAndGraph(pathfinder);
-		group2.computePairwisePathsAndGraph(pathfinder);
-		combined.computePairwisePathsAndGraph(pathfinder);
-		for(int i = 0; i < bootstrapGeneSetMaps.length; i++) {
-			System.out.println("Bootstrap round " + i);
-			bootstrapGeneSetMaps[i].computePairwisePathsAndGraph(pathfinder);
-		}
-
+		group1.computePairwisePathsAndGraph(pig);
+		group2.computePairwisePathsAndGraph(pig);
+		combined.computePairwisePathsAndGraph(pig);
 
 		//MOD12-2=EPHB2,P4HA2,ARHGEF10L,MYLK,ANGPTL4,SPTA1,ALK,LPA,HCLS1,PLA2G4C,MAP4K1,PRKCA,TBXAS1,ADH6,IQGAP2
 		//System.out.println(group1.getGeneSetMap().get("MOD12-2").getGraph().get);
@@ -310,19 +254,7 @@ public final class NetworkAnalysis {
 		//System.out.println(hits + " path cache hits.");
 		//System.out.println(misses + " path cache misses.");
 		//System.out.println((double) hits / (hits + misses) + " proportion of paths cached.");
-		savePaths(c, dataFile, precomputedPaths);
-	}
-
-	public static <K> LayeredGraph<K> reduceLayeredGraph(LayeredGraph<K> g, Configuration c){
-		//System.out.println("Original graph size: " + g.getNodes().size());
-		final ArrayList<Tuple<K, Integer>> degree = new ArrayList<>();
-		for(K k : g.getNodes()) degree.add(new Tuple<>(k, g.getNeighbors(k).size()));
-		degree.sort(Comparator.comparingInt(t -> -t.val2()));
-		final int toRetainCount = (int) Math.ceil(Math.min(c.analysisConfig.fractionOfNodesToRender * degree.size(), c.analysisConfig.maxNodesToRender));
-		final Set<K> toRetain = new HashSet<>();
-		for(int i = 0; i < toRetainCount; i++) toRetain.add(degree.get(i).val1());
-		//System.out.println("Reduced graph size: " + toRetain.size());
-		return g.subgraphWithNodes(new LayeredGraph<>(g.getType()), toRetain);
+		savePaths(c, dataFile, pig.getPaths());
 	}
 
 	public static Color parseColorOrDefault(String s, Color defaultColor){
@@ -424,27 +356,33 @@ public final class NetworkAnalysis {
 				renderer.setNodeBorderThicknessFunction(createNodeBorderThicknessFunction(c, group1, group2, graph));
 				return renderer;
 	}
+	
+	static LayeredGraph<Protein> getReducedGraph(Configuration c, LayeredGraph<Protein> g, Collection<Protein> endpoints) {
+		final int maxNodes = (int) Math.ceil(Math.min(c.analysisConfig.fractionOfNodesToRender * g.getNodes().size(), c.analysisConfig.maxNodesToRender));
+		return (LayeredGraph<Protein>) g.reduceByPaths(endpoints, maxNodes);
+	}
 
-	private static void layoutAndRender(Configuration c, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined, String clusterId) throws IOException {
+	static LayeredGraph<Protein> getReducedGraph(Configuration c, GeneSetMap gsm) {
+		return getReducedGraph(c, gsm.getLayeredGraph(), gsm.getUniqueProteins());
+	}
+	
+	private static void layoutAndRender(Configuration c, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined, ClusterAnalysis cluster, String clusterId) throws IOException {
 		// Render group1 (group2, group1 - group2, group2 - group1)
 		final List<Tuple<LayeredGraph<Protein>, String>> toRender = new LinkedList<>();
-
-		final LayeredGraph<Protein> group1Graph = group1.getLayeredGraph();		
-		final LayeredGraph<Protein> group1GraphReduced = reduceLayeredGraph(group1Graph, c);
-		if(group1GraphReduced.getNodes().size() > 0)
-			toRender.add(new Tuple<>(group1GraphReduced, "Group1"));
+		
+		final LayeredGraph<Protein> group1Graph = getReducedGraph(c, group1);
+		if(group1Graph.getNodes().size() > 0)
+			toRender.add(new Tuple<>(group1Graph, "Group1"));
 
 		//TODO refactor code
 		if(group2.getGeneSetMap().size() > 0){
 
-			final LayeredGraph<Protein> group2Graph = group2.getLayeredGraph();
-			final LayeredGraph<Protein> group2GraphReduced = reduceLayeredGraph(group2Graph, c);
-			if(group2GraphReduced.getNodes().size() != 0){
-				toRender.add(new Tuple<>(group2GraphReduced, "Group2"));
+			final LayeredGraph<Protein> group2Graph = getReducedGraph(c, group2);
+			if(group2Graph.getNodes().size() != 0){
+				toRender.add(new Tuple<>(group2Graph, "Group2"));
 
-				final LayeredGraph<Protein> combinedGraph = combined.getLayeredGraph();
-				final LayeredGraph<Protein> combinedGraphReduced = reduceLayeredGraph(combinedGraph, c);
-				toRender.add(new Tuple<>(combinedGraphReduced, "Group1AndGroup2"));
+				final LayeredGraph<Protein> combinedGraph = getReducedGraph(c, combined);
+				toRender.add(new Tuple<>(combinedGraph, "Group1AndGroup2"));
 
 				if(group1.getLayeredGraph().getNodes().size() > 0 &&
 						group2.getLayeredGraph().getNodes().size() > 0 &&
@@ -455,16 +393,21 @@ public final class NetworkAnalysis {
 					final double group1ScalingFactor = numGroup1 < numGroup2 ? numGroup2 / numGroup1 : 1;
 					final double group2ScalingFactor = numGroup2 < numGroup1 ? numGroup1 / numGroup2 : 1;
 
-					final LayeredGraph<Protein> group1MinusGroup2 = reduceLayeredGraph(group1Graph.subtract(group2Graph, group1ScalingFactor, group2ScalingFactor), c);
+					final LayeredGraph<Protein> group1MinusGroup2 = getReducedGraph(c,
+							group1Graph.subtract(group2Graph, group1ScalingFactor, group2ScalingFactor),
+							group1.getUniqueProteins());
 					if(group1MinusGroup2.getNodes().size() > 0)
 						toRender.add(new Tuple<>(group1MinusGroup2, "Group1MinusGroup2"));
-					final LayeredGraph<Protein> group2MinusGroup1 = reduceLayeredGraph(group2Graph.subtract(group1Graph, group2ScalingFactor, group1ScalingFactor), c);
+					final LayeredGraph<Protein> group2MinusGroup1 = getReducedGraph(
+							c,
+							group2Graph.subtract(group1Graph, group2ScalingFactor, group1ScalingFactor),
+							group2.getUniqueProteins());
 					if(group2MinusGroup1.getNodes().size() > 0)
 						toRender.add(new Tuple<>(group2MinusGroup1, "Group2MinusGroup1"));
 				}
 			}
 		}
-
+		
 		for(Tuple<LayeredGraph<Protein>, String> pair : toRender){
 			final LayeredGraph<Protein> graph = pair.val1();
 
@@ -486,6 +429,15 @@ public final class NetworkAnalysis {
 					clusterId);
 			// 143Patients, C43, _, Group1, _, Interactions
 			// 143Patients, C43, _, Group1, _, GeneSet
+		}
+		
+		if(cluster != null) {
+			final File outputDirectory = new File(c.generalConfig.outputDirectory, clusterId);
+			if(!outputDirectory.exists()) outputDirectory.mkdirs();
+			final File clusterDendrogramFile = new File(outputDirectory, c.generalConfig.projectName + clusterId + "_Dendrogram.txt");
+			try(final BufferedWriter out = new BufferedWriter(new FileWriter(clusterDendrogramFile))) {
+				out.write(cluster.getNode().getPhylogeneticTreeString());
+			}
 		}
 
 	}
@@ -540,12 +492,13 @@ public final class NetworkAnalysis {
 
 	}
 
-	private static <K> double calculateIntersectionOverUnionSimilarity(Graph<K> x, Graph<K> y){
+	private static <K extends Comparable<K>> double calculateIntersectionOverUnionSimilarity(Graph<K> x, Graph<K> y){
 		final Set<K> union = new HashSet<>(x.getNodes());
 		union.addAll(y.getNodes());
 		if(union.size() == 0) return 0;
 		final Set<K> intersection = new HashSet<>(x.getNodes());
 		intersection.retainAll(y.getNodes());
+
 		return (double) intersection.size() / union.size();
 	}
 
@@ -594,8 +547,54 @@ public final class NetworkAnalysis {
 		if(c.rendererConfig.displayRendering)
 			Desktop.getDesktop().open(imageFile);
 	}
+	
+	private static double calculateDistance(boolean[] x, boolean y[]) {
+		int n = 0;
+		int d = 0;
+		for(int i = 0; i < x.length; i++) {
+			if(x[i] || y[i]) d++;
+			if(x[i] && y[i]) n++;
+		}
+		return 1 - (double) n / d;
+	}
+	
+	private static final Random random = new Random();
+	private static PhylogeneticTreeNode generateBootstrappedTree(GeneSetMap combined, Map<String, PhylogeneticTreeNode> leaves) {
+		final Set<Protein> proteinsSet = new HashSet<>();
+		final Map<String, GeneSet> geneSetMap = combined.getGeneSetMap();
+		
+		final Map<String, Set<Protein>> proteinSetMap = new HashMap<>();
+		for(String patient : geneSetMap.keySet()) {
+			final Set<Protein> patientProteinSet = new HashSet<>(geneSetMap.get(patient).getGraph().getNodes());
+			proteinsSet.addAll(patientProteinSet);
+			proteinSetMap.put(patient, patientProteinSet);
+		}
+		final Protein[] proteins = proteinsSet.toArray(new Protein[proteinsSet.size()]);
+		final String[] patients = geneSetMap.keySet().toArray(new String[geneSetMap.size()]);
+		
+		final boolean[][] binaryMatrix = new boolean[patients.length][proteins.length];
+		
+		for(int column = 0; column < proteins.length; column++) {
+			final Protein protein = proteins[random.nextInt(proteins.length)];
+			for(int row = 0; row < patients.length; row++) {
+				binaryMatrix[row][column] = proteinSetMap.get(patients[row]).contains(protein);
+			}
+		}
+		
+		final DistanceMatrix<PhylogeneticTreeNode> distanceMatrix = new DistanceMatrix<>();
+		for(int i = 0; i < patients.length - 1; i++) {
+			for(int j = i + 1; j < patients.length; j++) {
+				distanceMatrix.setDistance(
+						leaves.get(patients[i]).clone(),
+						leaves.get(patients[j]).clone(),
+						calculateDistance(binaryMatrix[i], binaryMatrix[j]));
+			}
+		}
+		
+		return PhylogeneticTree.createTreeFromMatrix(distanceMatrix);
+	}
 
-	private static void performClusterAnalysis(Configuration c, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined, GeneSetMap[] bootstrapGeneSetMaps) {
+	private static void performClusterAnalysis(Configuration c, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined) {
 		final Map<String, GeneSet> allPatients = new HashMap<>();
 		final Map<String, PhylogeneticTreeNode> leaves = new HashMap<>();
 
@@ -624,7 +623,7 @@ public final class NetworkAnalysis {
 			//only 1 patient has graphs
 			try {
 				System.out.println("Only 1 patient graph...will render its graph and exit.");
-				layoutAndRender(c, group1, group2, combined, allPatientKeys[0]);
+				layoutAndRender(c, group1, group2, combined, null, allPatientKeys[0]);
 				if(c.rendererConfig.displayRendering){
 					System.out.println("Press enter to exit...");
 					@SuppressWarnings("resource")
@@ -640,46 +639,32 @@ public final class NetworkAnalysis {
 		}
 
 		final DistanceMatrix<PhylogeneticTreeNode> dissimilarityMatrix = new DistanceMatrix<>();
+		final DistanceMatrix<PhylogeneticTreeNode> dissimilarityMatrix2 = new DistanceMatrix<>();
 
 		for(int i = 0; i < allPatientKeys.length - 1; i++){
 			for(int j = i + 1; j < allPatientKeys.length; j++){
 				final GeneSet x =  allPatients.get(allPatientKeys[i]);
 				final GeneSet y =  allPatients.get(allPatientKeys[j]);
 				
+				final double distance = calculateGraphDistance(x.getGraph(), y.getGraph());
 				dissimilarityMatrix.setDistance(
 						leaves.get(allPatientKeys[i]),
 						leaves.get(allPatientKeys[j]),
-						calculateGraphDistance(x.getGraph(), y.getGraph()));
+						distance);
+				dissimilarityMatrix2.setDistance(leaves.get(allPatientKeys[i]), leaves.get(allPatientKeys[j]), distance);
+				
 			}
 		}
 		
 		final PhylogeneticTreeNode treeRoot = PhylogeneticTree.createTreeFromMatrix(dissimilarityMatrix);
 		
-		int r = 0;
-		for(GeneSetMap gsm : bootstrapGeneSetMaps) {
-			final HashMap<String, PhylogeneticTreeNode> cloned = new HashMap<>();
-			leaves.forEach((k, v) -> cloned.put(k, v.clone()));
-			
-			System.out.println("Bootstrap analysis round " + r++);
-			final DistanceMatrix<PhylogeneticTreeNode> bootstrapDissimilarityMatrix = new DistanceMatrix<>();
-			final Map<String, GeneSet> bootstrapPatients = gsm.getGeneSetMap();
-			for(int i = 0; i < allPatientKeys.length - 1; i++) {
-				for(int j = i + 1; j < allPatientKeys.length; j++) {
-					
-					final GeneSet x =  bootstrapPatients.get(allPatientKeys[i]);
-					final GeneSet y =  bootstrapPatients.get(allPatientKeys[j]);
-
-					// implementation choice: if allPatients.get(~) == null, we simply continue instead
-					// of setting the distance to be 1 (the maximum)
-					if(x == null || y == null) continue;
-					bootstrapDissimilarityMatrix.setDistance(
-							cloned.get(allPatientKeys[i]),
-							cloned.get(allPatientKeys[j]),
-							calculateGraphDistance(x.getGraph(), y.getGraph()));
-				}
+		if(c.analysisConfig.bootstrappingRounds != 0 && c.analysisConfig.bootstrappingRounds < 100) {
+			System.out.println("If bootstrapping, must specify at least 100 rounds. Skipping bootstrapping...");
+		} else {
+			for(int i = 0; i < c.analysisConfig.bootstrappingRounds; i++) {
+				System.out.println("Bootstrap round " + i);
+				treeRoot.updateWithBootstrapRound(generateBootstrappedTree(combined, leaves));
 			}
-			final PhylogeneticTreeNode bootstrapTree = PhylogeneticTree.createTreeFromMatrix(bootstrapDissimilarityMatrix);
-			treeRoot.updateWithBootstrapRound(bootstrapTree);
 		}
 		
 		assert(treeRoot != null);
@@ -688,7 +673,7 @@ public final class NetworkAnalysis {
 			Map<String, ClusterAnalysis> clusterAnalysisMapping = PhylogeneticTree.recursivelyAnalyzeClusters(c, treeRoot, dissimilarityMatrix, group1, group2, combined);
 			renderAndDisplayDendrogram(c, group1, group2, clusterAnalysisMapping);
 			saveClusterAnalysesSummary(clusterAnalysisMapping, new File(c.generalConfig.outputDirectory, c.generalConfig.projectName + "_ClusterAnalyses.csv"));
-			handleInput(c, group1, group2, combined, clusterAnalysisMapping);
+			handleInput(c, group1, group2, combined, clusterAnalysisMapping, dissimilarityMatrix2);
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -718,13 +703,15 @@ public final class NetworkAnalysis {
 	}
 
 	private static void handleInput(Configuration c, GeneSetMap group1, GeneSetMap group2,
-			GeneSetMap combined, Map<String, ClusterAnalysis> clusterAnalysisMapping){
+			GeneSetMap combined, Map<String, ClusterAnalysis> clusterAnalysisMapping,
+			DistanceMatrix<PhylogeneticTreeNode> dissimilarityMatrix){
 		final String patientName = group1.getGeneSetMap().keySet().iterator().next();
 		System.out.println("\n\n\n---INPUT REQUIRED---\nCommand examples:\n"
 				+  patientName + ": Layout and render the pairwise paths graph of patient " + patientName + "\n"
 				+ "C5: Layout and render the summary graph of all nodes belonging to C5\n"
 				+ "info: Displays information for every cluster\n"
 				+ "info C17: Displays information for cluster C17\n"
+				+ "distance C12 C20: displays the mean dissimilarity between patients of C12 and C20\n"
 				+ "q or quit: Terminates the application\n");
 
 		@SuppressWarnings("resource")
@@ -733,6 +720,8 @@ public final class NetworkAnalysis {
 			final String s = in.nextLine().trim();
 			if(s.equalsIgnoreCase("q") || s.equalsIgnoreCase("quit"))
 				break;
+			if(s.isEmpty())
+				continue;
 
 			if(s.equalsIgnoreCase("info")){
 				System.out.println(getClusterAnalysesSummaryText(clusterAnalysisMapping));
@@ -747,11 +736,50 @@ public final class NetworkAnalysis {
 				}
 				System.out.println(analysis.getPrintableString());
 				System.out.println();
-			}else{
+			}else if(s.toLowerCase().startsWith("distance")){
+				final String[] ids = s.substring(8).trim().split("\\s+");
+				
+				if(ids.length != 2) {
+					System.out.println("Must specify exactly two clusters to take the mean dissimilarity between");
+					continue;
+				}
+				
+				final ClusterAnalysis x = clusterAnalysisMapping.get(ids[0]);
+				if(x == null) {
+					System.out.println(ids[0] + " is an invalid cluster identifier...\n");
+					continue;
+				}
+				final ClusterAnalysis y = clusterAnalysisMapping.get(ids[1]);
+				if(y == null) {
+					System.out.println(ids[1] + " is an invalid cluster identifier...\n");
+					continue;
+				}
+				
+				final double dissimilarity = getMeanDissimilarity(x, y, dissimilarityMatrix);
+				System.out.println(dissimilarity);
+				System.out.println();
+			} else {
 				handleRenderInput(c, group1, group2, combined, clusterAnalysisMapping, s);
 			}
 
 		}
+	}
+
+	private static double getMeanDissimilarity(ClusterAnalysis x, ClusterAnalysis y,
+			DistanceMatrix<PhylogeneticTreeNode> dissimilarityMatrix) {
+		final PhylogeneticTreeNode[] xLeaves = x.isLeaf() ? new PhylogeneticTreeNode[]{x.getNode()} : x.getNode().getLeaves();
+		final PhylogeneticTreeNode[] yLeaves = y.isLeaf() ? new PhylogeneticTreeNode[]{y.getNode()} : y.getNode().getLeaves();
+		
+		double xWeight = 0;
+		double yWeight = 0;
+		double total_dissimilairty = 0;
+		for(PhylogeneticTreeNode xLeaf : xLeaves)
+			for(PhylogeneticTreeNode yLeaf : yLeaves)
+				total_dissimilairty += dissimilarityMatrix.getDistance(xLeaf, yLeaf);
+		for(PhylogeneticTreeNode xLeaf : xLeaves) xWeight += xLeaf.getWeight();
+		for(PhylogeneticTreeNode yLeaf : yLeaves) yWeight += yLeaf.getWeight();
+		
+		return total_dissimilairty / (xWeight * yWeight);
 	}
 
 	private static void handleRenderInput(Configuration c, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined, Map<String, ClusterAnalysis> clusterMapping, String id){
@@ -783,7 +811,7 @@ public final class NetworkAnalysis {
 		final GeneSetMap subsetCombined = combined.subset(patientsToInclude);
 
 		try {
-			layoutAndRender(c, subsetGroup1, subsetGroup2, subsetCombined, id);
+			layoutAndRender(c, subsetGroup1, subsetGroup2, subsetCombined, ca, id);
 			System.out.println("\n");
 		} catch (IOException e) {
 			System.err.println("Error in attempt to layout and render " + id);

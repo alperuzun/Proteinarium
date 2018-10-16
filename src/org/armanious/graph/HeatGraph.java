@@ -6,14 +6,14 @@ import java.util.function.Function;
 
 import org.armanious.Tuple;
 
-public class HeatGraph<K> extends AnnotatedGraph<K, Double> {
+public class HeatGraph<K extends Comparable<K>> extends AnnotatedGraph<K, Double> {
 	
-	public HeatGraph() {
-		this(1D);
+	public HeatGraph(double maxPathCost, int maxPathLength) {
+		this(1D, maxPathCost, maxPathLength);
 	}
 	
-	public HeatGraph(double initialHeat) {
-		super(initialHeat);
+	public HeatGraph(double initialHeat, double maxPathCost, int maxPathLength) {
+		super(initialHeat, maxPathCost, maxPathLength);
 	}
 
 	private static final double STANDARD_DIFFUSION_THRESHOLD = 1E-5;

@@ -43,6 +43,8 @@ public class ClusterAnalysis {
 	private final int numDigits;
 	private final String group1Patients;
 	private final String group2Patients;
+	
+	private final boolean bootstrapped;
 
 	public ClusterAnalysis(Configuration c,
 			String clusterId,
@@ -71,10 +73,12 @@ public class ClusterAnalysis {
 				}
 			}
 		}
-
+		
+		this.bootstrapped = cluster.isBootstrapped();
+		
 		this.clusterId = clusterId;
 		this.node = cluster;
-		this.normalizedHeight = cluster.getHeight() / maxHeight;
+		this.normalizedHeight = cluster.getHeight();// / maxHeight;
 		this.numberGroup1 = numberGroup1;
 		this.numberGroup2 = (isLeaf ? 1 : nodeLeafs.length) - numberGroup1;
 		this.numberCombined = this.numberGroup1 + this.numberGroup2;
@@ -146,14 +150,14 @@ public class ClusterAnalysis {
 		}else{
 			sb.append("Cluster analysis of ").append(clusterId).append("\n\t")
 			.append("Average Distance (Height) = ").append(DECIMAL_FORMAT.format(normalizedHeight)).append("\n\t")
-			.append("Bootstrapping Confidence = ").append(DECIMAL_FORMAT.format(bootstrappingConfidence)).append("\n\t")
+			.append("Bootstrapping Confidence = ").append(bootstrapped ? DECIMAL_FORMAT.format(bootstrappingConfidence) : "N/A").append("\n\t")
 			.append("Total Number of Patients = ").append(numberCombined).append("\n\t")
 			.append("Number in Group 1 = ").append(numberGroup1)
 			.append(" (").append(DECIMAL_FORMAT.format(weightGroup1 * 100D / (weightGroup1 + weightGroup2))).append("%)\n\t")
 			.append("Number in Group 2 = ").append(numberGroup2)
 			.append(" (").append(DECIMAL_FORMAT.format(weightGroup2 * 100D / (weightGroup1 + weightGroup2))).append("%)\n\t")
 			.append("p-value = ").append(DECIMAL_FORMAT.format(pValue)).append("\n\t")
-			.append("Group 1 and Group 2 Clustering Coefficient = ").append(DECIMAL_FORMAT.format(combinedClusteringCoefficient))
+			.append("Group 1 and Group 2 Clustering Coefficient = ").append(DECIMAL_FORMAT.format(combinedClusteringCoefficient)).append("\n\t")
 			.append("Group 1 Clustering Coefficient = ").append(DECIMAL_FORMAT.format(group1ClusteringCoefficient)).append("\n\t")
 			.append("Group 2 Clustering Coefficient = ").append(DECIMAL_FORMAT.format(group2ClusteringCoefficient)).append("\n\t")
 			.append("Group 1 minus Group 2 Clustering Coefficient = ").append(DECIMAL_FORMAT.format(group1minusGroup2ClusteringCoefficient)).append("\n\t")
@@ -169,7 +173,7 @@ public class ClusterAnalysis {
 		return new StringBuilder()
 				.append(pad(clusterId, numDigits + 1)).append('\t')
 				.append(DECIMAL_FORMAT.format(normalizedHeight)).append('\t')
-				.append(DECIMAL_FORMAT.format(bootstrappingConfidence)).append('\t')
+				.append(bootstrapped ? DECIMAL_FORMAT.format(bootstrappingConfidence) : "N/A").append('\t')
 				.append(pad(numberCombined, numDigits)).append('\t')
 				.append(pad(numberGroup1, numDigits)).append('\t')
 				.append(pad(numberGroup2, numDigits)).append('\t')
@@ -271,9 +275,9 @@ Cluster Id            Num Group 2                Max Dissimilarity
 		final LayeredGraph<Protein> group2Graph = group2.getLayeredGraph();	
 		coefficients[2] = group2Graph.getGlobalClusteringCoefficient();
 
-		final LayeredGraph<Protein> group1minusGroup2 = NetworkAnalysis.reduceLayeredGraph(group1.getLayeredGraph().subtract(group2Graph, group1ScalingFactor, group2ScalingFactor), c);
+		final LayeredGraph<Protein> group1minusGroup2 = NetworkAnalysis.getReducedGraph(c, group1.getLayeredGraph().subtract(group2Graph, group1ScalingFactor, group2ScalingFactor), group1.getUniqueProteins());
 		coefficients[3] = group1minusGroup2.getGlobalClusteringCoefficient();
-		final LayeredGraph<Protein> group2minusGroup1 = NetworkAnalysis.reduceLayeredGraph(group2Graph.subtract(group1Graph, group2ScalingFactor, group1ScalingFactor), c);
+		final LayeredGraph<Protein> group2minusGroup1 = NetworkAnalysis.getReducedGraph(c, group2Graph.subtract(group1Graph, group2ScalingFactor, group1ScalingFactor), group2.getUniqueProteins());
 		coefficients[4] = group2minusGroup1.getGlobalClusteringCoefficient();
 
 		return coefficients;

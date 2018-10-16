@@ -22,7 +22,7 @@ import org.armanious.graph.Edge;
 import org.armanious.network.Configuration.RendererConfig;
 import org.armanious.network.visualization.ForceDirectedLayout.GraphLayoutData;
 
-public class Renderer<K> {
+public class Renderer<K extends Comparable<K>> {
 	
 	private final RendererConfig rc;
 	private final File outputDirectory;
