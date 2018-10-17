@@ -170,11 +170,11 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		if(endpoints.size() < 2) return g;
 		
 		final ArrayList<K> sortedEndpoints = new ArrayList<>(endpoints.size());
-		for(K k : endpoints) {
-			if(neighbors.containsKey(k)) {
+		for(K k : endpoints)
+			if(neighbors.containsKey(k))
 				sortedEndpoints.add(k);
-			}
-		}
+		if(sortedEndpoints.size() < 2) return g;
+		
 		sortedEndpoints.sort(Comparator.comparingInt(t -> -getReductionMetric(t)));
 		
 		HashSet<K> containedNodes = new HashSet<>();

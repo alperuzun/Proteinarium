@@ -104,15 +104,15 @@ public class Renderer<K extends Comparable<K>> {
 			if(positions[i].y + radius * 2 > maxY) maxY = positions[i].y + radius * 2;
 		}
 		
-		final double width = maxX;
-		final double height = maxY;
+		final double width = Math.max(1, maxX);
+		final double height = Math.max(1, maxY);
 		
 		if((long) width * height > Integer.MAX_VALUE){
 			System.out.println("Integer overflow error; (" + width + ", " + height + ")");
 			throw new RuntimeException();
 		}
 
-		//System.out.println("Attempting to create buffered image with width=" + width + ", height=" + height);
+		// System.out.println("Attempting to create buffered image with width=" + width + ", height=" + height);
 		final BufferedImage image = new BufferedImage((int)(width * (1 + padding)), (int)(height * (1 + padding)), BufferedImage.TYPE_INT_ARGB);
 		final Graphics2D g = RenderingUtils.prepareBufferedImageGraphics(rc, image);
 		

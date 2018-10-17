@@ -394,13 +394,13 @@ public final class NetworkAnalysis {
 					final double group2ScalingFactor = numGroup2 < numGroup1 ? numGroup1 / numGroup2 : 1;
 
 					final LayeredGraph<Protein> group1MinusGroup2 = getReducedGraph(c,
-							group1Graph.subtract(group2Graph, group1ScalingFactor, group2ScalingFactor),
+							group1.getLayeredGraph().subtract(group2.getLayeredGraph(), group1ScalingFactor, group2ScalingFactor),
 							group1.getUniqueProteins());
 					if(group1MinusGroup2.getNodes().size() > 0)
 						toRender.add(new Tuple<>(group1MinusGroup2, "Group1MinusGroup2"));
 					final LayeredGraph<Protein> group2MinusGroup1 = getReducedGraph(
 							c,
-							group2Graph.subtract(group1Graph, group2ScalingFactor, group1ScalingFactor),
+							group2.getLayeredGraph().subtract(group1.getLayeredGraph(), group2ScalingFactor, group1ScalingFactor),
 							group2.getUniqueProteins());
 					if(group2MinusGroup1.getNodes().size() > 0)
 						toRender.add(new Tuple<>(group2MinusGroup1, "Group2MinusGroup1"));

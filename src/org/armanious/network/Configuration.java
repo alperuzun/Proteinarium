@@ -162,6 +162,7 @@ public final class Configuration {
 		public final double repulsionConstant;
 		public final double attractionConstant;
 		public final double deltaThreshold;
+		public final double preferredPadding;
 
 		public final long maxIterations;
 		public final long maxTime;
@@ -170,8 +171,9 @@ public final class Configuration {
 		public final double maxNodeRadius;
 
 		public ForceDirectedLayoutConfig(Map<String, String> map){
-			repulsionConstant = Double.parseDouble(map.getOrDefault("repulsionConstant", "0.5"));
+			repulsionConstant = Double.parseDouble(map.getOrDefault("repulsionConstant", "0.1"));
 			attractionConstant = Double.parseDouble(map.getOrDefault("attractionConstant", "0.001"));
+			preferredPadding = Double.parseDouble(map.getOrDefault("preferredPadding", "5"));
 			deltaThreshold = Double.parseDouble(map.getOrDefault("deltaThreshold", "0.001"));
 			maxIterations = Long.parseLong(map.getOrDefault("maxIterations", "10000"));
 			maxTime = Long.parseLong(map.getOrDefault("maxTime", String.valueOf(Long.MAX_VALUE)));

@@ -269,10 +269,10 @@ Cluster Id            Num Group 2                Max Dissimilarity
 		final LayeredGraph<Protein> combinedGraph = combined.getLayeredGraph();
 		coefficients[0] = combinedGraph.getGlobalClusteringCoefficient();
 
-		final LayeredGraph<Protein> group1Graph = group1.getLayeredGraph();	
+		final LayeredGraph<Protein> group1Graph = NetworkAnalysis.getReducedGraph(c, group2);
 		coefficients[1] = group1Graph.getGlobalClusteringCoefficient();
 
-		final LayeredGraph<Protein> group2Graph = group2.getLayeredGraph();	
+		final LayeredGraph<Protein> group2Graph = NetworkAnalysis.getReducedGraph(c, group2);
 		coefficients[2] = group2Graph.getGlobalClusteringCoefficient();
 
 		final LayeredGraph<Protein> group1minusGroup2 = NetworkAnalysis.getReducedGraph(c, group1.getLayeredGraph().subtract(group2Graph, group1ScalingFactor, group2ScalingFactor), group1.getUniqueProteins());

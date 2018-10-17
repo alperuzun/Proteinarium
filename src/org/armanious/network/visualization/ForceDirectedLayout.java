@@ -26,8 +26,13 @@ public class ForceDirectedLayout<K extends Comparable<K>> {
 		final double minRadius = fdlc.minNodeRadius;
 		final double maxRadius = fdlc.maxNodeRadius < 0 ? Math.max(2 * fdlc.minNodeRadius, Math.min(100, graph.getNodes().size())) : fdlc.maxNodeRadius;
 		assert(maxRadius >= minRadius);
-		final double deltaSize = (maxRadius - minRadius) / graph.getNodes().size();
-				
+		double maxDegree = 1;
+		for(K k : graph.getNodes()) {
+			final int degree = graph.getNeighbors(k).size();
+			if(degree > maxDegree) maxDegree = degree;
+		}
+		final double deltaSize = (maxRadius - minRadius) / maxDegree;
+		
 		data = new GraphLayoutData<>(graph,
 				k -> minRadius + deltaSize * graph.getNeighbors(k).size());
 		this.renderer = renderer;
@@ -76,16 +81,22 @@ public class ForceDirectedLayout<K extends Comparable<K>> {
 		return data.positions[i].distance(data.positions[j]);
 	}
 	
+	private double distanceFromEdges(GraphLayoutData<K> data, int i, int j){
+		assert(i != j);
+		return data.positions[i].distance(data.positions[j]) - data.radii[i] - data.radii[j];
+	}
+	
 	private void repel(GraphLayoutData<K> data, Point2D.Double delta, int i, int j){
 		final double dist = distanceFromCenters(data, i, j);
-		final double magnitude = -fdlc.repulsionConstant * data.radii[i] * data.radii[j] / (dist * dist);
+		final double magnitude = -fdlc.repulsionConstant * data.radii[i] * data.radii[i] * data.radii[j] * data.radii[j] / (dist * dist * dist);
 		
 		calculateOffset(data, magnitude, delta, i, j);
 	}
 
 	private void attract(GraphLayoutData<K> data, Point2D.Double delta, int i, int j){
-		final double dist = distanceFromCenters(data, i, j);
-		final double magnitude = fdlc.attractionConstant * dist;
+		final double dist = distanceFromEdges(data, i, j);
+		final double springDifference = dist - fdlc.preferredPadding;
+		final double magnitude = fdlc.attractionConstant * springDifference;
 		calculateOffset(data, magnitude, delta, i, j);
 	}
 	
@@ -120,16 +131,16 @@ public class ForceDirectedLayout<K extends Comparable<K>> {
 			positions = new Point2D.Double[nodes.length];
 
 			final HashMap<K, Integer> map = new HashMap<>();
+			double curCumulativeRadius = 0;
 			for(int i = 0; i < nodes.length; i++){
 				map.put(nodes[i], i);
 				final Point2D.Double pos = new Point2D.Double(
-						Math.cos(Math.PI / 8 * i) * i,
-						Math.sin(Math.PI / 8 * i) * i
-						/*random.nextGaussian() * nodes.length,
-						random.nextGaussian() * nodes.length*/
+						Math.cos(Math.PI / 8 * i) * curCumulativeRadius,
+						Math.sin(Math.PI / 8 * i) * curCumulativeRadius
 						);
 				positions[i] = pos;
 				radii[i] = nodeRadiusFunction.apply(nodes[i]);
+				curCumulativeRadius += radii[i] / 4;
 				assert(radii[i] >= 1);
 			}
 			int maxDegree = 0;
