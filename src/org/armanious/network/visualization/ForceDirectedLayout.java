@@ -88,15 +88,14 @@ public class ForceDirectedLayout<K extends Comparable<K>> {
 	
 	private void repel(GraphLayoutData<K> data, Point2D.Double delta, int i, int j){
 		final double dist = distanceFromCenters(data, i, j);
-		final double magnitude = -fdlc.repulsionConstant * data.radii[i] * data.radii[i] * data.radii[j] * data.radii[j] / (dist * dist * dist);
+		final double magnitude = -fdlc.repulsionConstant * data.radii[i] * data.radii[j] / (dist * dist);
 		
 		calculateOffset(data, magnitude, delta, i, j);
 	}
 
 	private void attract(GraphLayoutData<K> data, Point2D.Double delta, int i, int j){
-		final double dist = distanceFromEdges(data, i, j);
-		final double springDifference = dist - fdlc.preferredPadding;
-		final double magnitude = fdlc.attractionConstant * springDifference;
+		final double dist = distanceFromCenters(data, i, j);
+		final double magnitude = fdlc.attractionConstant * dist;
 		calculateOffset(data, magnitude, delta, i, j);
 	}
 	

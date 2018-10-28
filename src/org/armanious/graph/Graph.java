@@ -29,8 +29,11 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 	
 	public void addEdge(Edge<K> edge){
 		if(!neighbors.containsKey(edge.getSource())) neighbors.put(edge.getSource(), new HashSet<>());
-		if(!neighbors.containsKey(edge.getTarget())) neighbors.put(edge.getTarget(), new HashSet<>());
 		neighbors.get(edge.getSource()).add(edge);
+		
+		// edges are added directionally, but we keep track of nodes in the graph by neighbors.keySet(),
+		// so just have an empty set of neighbors for "sink" nodes
+		if(!neighbors.containsKey(edge.getTarget())) neighbors.put(edge.getTarget(), new HashSet<>());
 	}
 	
 	public Collection<K> getNodes(){
@@ -52,10 +55,13 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 				}
 			}
 		}
+		cachedPaths.remove(k);
+		for(HashMap<K, Path<K>> pathsByDest : cachedPaths.values()) pathsByDest.remove(k);
 	}
 	
 	public void clear(){
 		neighbors.clear();
+		cachedPaths.clear();
 	}
 	
 	public final void addEdge(K src, K target){
@@ -130,20 +136,6 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		Collections.reverse(path);
 		return new Path<>(path);
 	}
-
-	@Deprecated
-	public Graph<K> subgraphWithNodes(Collection<K> nodes){
-		return subgraphWithNodes(new Graph<>(maxPathCost, maxPathLength), nodes);
-	}
-
-	@Deprecated
-	public <G extends Graph<K>> G subgraphWithNodes(G g, Collection<K> nodes) {
-		for(K k : nodes)
-			for(Edge<K> e : getNeighbors(k))
-				if(nodes.contains(e.getTarget()))
-					g.addEdge(k, e.getTarget(), e.getWeight(), false);
-		return g;
-	}
 	
 	public Graph<K> subgraphWithEdges(Collection<Edge<K>> edges){
 		return subgraphWithEdges(new Graph<>(maxPathCost, maxPathLength), edges);
@@ -166,25 +158,31 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 	}
 	
 	public Graph<K> reduceByPaths(Collection<K> endpoints, int maxNodes) {
+		return reduceByPaths(endpoints, maxNodes, true);
+	}
+	
+	public Graph<K> reduceByPaths(Collection<K> endpoints, int maxNodes, boolean bidirectional) {
 		final Graph<K> g = emptyGraph();
 		if(endpoints.size() < 2) return g;
 		
-		final ArrayList<K> sortedEndpoints = new ArrayList<>(endpoints.size());
+		final ArrayList<K> validEndpoints = new ArrayList<>(endpoints.size());
 		for(K k : endpoints)
 			if(neighbors.containsKey(k))
-				sortedEndpoints.add(k);
-		if(sortedEndpoints.size() < 2) return g;
+				validEndpoints.add(k);
+		if(validEndpoints.size() < 2) return g;
 		
-		sortedEndpoints.sort(Comparator.comparingInt(t -> -getReductionMetric(t)));
+		validEndpoints.sort(Comparator.comparingInt(t -> -getReductionMetric(t)));
 		
 		HashSet<K> containedNodes = new HashSet<>();
-		containedNodes.add(sortedEndpoints.get(0));
+		containedNodes.add(validEndpoints.get(0));
 		
-		for(int nextEndpointToAdd = 1; nextEndpointToAdd < sortedEndpoints.size(); nextEndpointToAdd++) {
+		for(int nextEndpointToAdd = 1;
+				nextEndpointToAdd < validEndpoints.size() && containedNodes.size() < maxNodes;
+				nextEndpointToAdd++) {
 			final LinkedList<Path<K>> pathsToAdd = new LinkedList<>();
 			final HashSet<K> newNodes = new HashSet<>();
 			for(int prevEndpoint = 0; prevEndpoint < nextEndpointToAdd; prevEndpoint++) {
-				final Path<K> pathToAdd = findPath(sortedEndpoints.get(prevEndpoint), sortedEndpoints.get(nextEndpointToAdd));
+				final Path<K> pathToAdd = findPath(validEndpoints.get(prevEndpoint), validEndpoints.get(nextEndpointToAdd));
 				pathsToAdd.add(pathToAdd);
 				for(Edge<K> edge : pathToAdd.getEdges()) {
 					newNodes.add(edge.getSource());
@@ -195,6 +193,7 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 			for(Path<K> pathToAdd : pathsToAdd) {
 				for(Edge<K> edge : pathToAdd.getEdges()) {
 					g.addEdge(edge);
+					if(bidirectional) g.addEdge(edge.getTarget(), edge.getSource(), edge.getWeight());
 				}
 			}
 			containedNodes.addAll(newNodes);
@@ -202,9 +201,9 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		return g;
 	}
 
-	// implementation of
-	// https://en.wikipedia.org/wiki/Clustering_coefficient#Network_average_clustering_coefficient
 	public double getLocalClusteringCoefficient(K node){
+		// implementation of
+		// https://en.wikipedia.org/wiki/Clustering_coefficient#Network_average_clustering_coefficient
 		final Set<K> neighbors = getNeighbors(node).stream().map(edge -> edge.getTarget()).collect(Collectors.toSet());
 		if(neighbors.size() <= 1) return 0;
 		
@@ -218,12 +217,12 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		return triangles / (neighbors.size() * (neighbors.size() - 1));
 	}
 	
-	// implementation of
-	// https://en.wikipedia.org/wiki/Clustering_coefficient#Network_average_clustering_coefficient
 	public double getGlobalClusteringCoefficient(){
-		double sum = 0;
+		// implementation of
+		// https://en.wikipedia.org/wiki/Clustering_coefficient#Network_average_clustering_coefficient
 		final Collection<K> nodes = getNodes();
 		if(nodes.size() == 0) return 0;
+		double sum = 0;
 		for(K node : nodes) sum += getLocalClusteringCoefficient(node);
 		return sum / nodes.size();
 	}
@@ -239,6 +238,7 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		
 		Path<K> path = cachedPaths.containsKey(src) ? cachedPaths.get(src).get(dst) : null;
 		if(path == null){
+			// TODO don't have the 1000 - weight trick hard-coded in Graph...
 			path = dijkstras(src, dst, e -> 1000D - e.getWeight(), maxPathCost, maxPathLength);
 			
 			HashMap<K, Path<K>> innerMap = cachedPaths.get(src);

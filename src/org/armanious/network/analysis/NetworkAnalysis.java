@@ -555,7 +555,7 @@ public final class NetworkAnalysis {
 			if(x[i] || y[i]) d++;
 			if(x[i] && y[i]) n++;
 		}
-		return 1 - (double) n / d;
+		return 1 - (d > 0 ? (double) n / d : 0);
 	}
 	
 	private static final Random random = new Random();

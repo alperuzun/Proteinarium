@@ -66,7 +66,7 @@ public final class LayeredGraph<K extends Comparable<K>> extends AnnotatedGraph<
 		final HashSet<K> toRetain = new HashSet<>();
 		
 		for(K node : getNodes())
-			if(!lg.getNodes().contains(node) || lhsFactor * getCount(node) > rhsFactor * (lg.getNodes().contains(node) ? lg.getCount(node) : 0))
+			if(!lg.getNodes().contains(node) || lhsFactor * getCount(node) > rhsFactor * lg.getCount(node))
 				toRetain.add(node);
 		for(K node : toRetain)
 			for(Edge<K> edge : neighbors.get(node))
@@ -79,17 +79,6 @@ public final class LayeredGraph<K extends Comparable<K>> extends AnnotatedGraph<
 
 	public double getMaxCount() {
 		return maxCount;
-	}
-
-	@Override
-	public <G extends Graph<K>> G subgraphWithNodes(G g, Collection<K> nodes) {
-		g = super.subgraphWithNodes(g, nodes);
-		if(g instanceof LayeredGraph){
-			final LayeredGraph<K> lg = (LayeredGraph<K>) g;
-			for(K node : lg.getNodes())
-				lg.setCount(node, getCount(node));
-		}
-		return g;
 	}
 
 	@Override

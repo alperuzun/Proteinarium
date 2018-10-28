@@ -65,7 +65,7 @@ public class GeneSet {
 			for(int j = i + 1; j < endpoints.length; j++){
 				final Path<Protein> path = pathfinder.findPath(endpoints[i], endpoints[j]);
 				for(Edge<Protein> edge : path.getEdges()){
-					graph.addEdge(edge.getSource(), edge.getTarget(), edge.getWeight(), true);
+					graph.addEdge(edge.getSource(), edge.getTarget(), edge.getWeight());
 				}
 			}
 		}
