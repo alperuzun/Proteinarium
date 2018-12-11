@@ -23,11 +23,11 @@ public class ForceDirectedLayout<K extends Comparable<K>> {
 	
 	public ForceDirectedLayout(ForceDirectedLayoutConfig fdlc, Graph<K> graph, Renderer<K> renderer, String name){
 		this.fdlc = fdlc;
-		final double minRadius = fdlc.minNodeRadius;
-		final double maxRadius = fdlc.maxNodeRadius < 0 ? Math.max(2 * fdlc.minNodeRadius, Math.min(100, graph.getNodes().size())) : fdlc.maxNodeRadius;
+		final double minRadius = fdlc.minVertexRadius;
+		final double maxRadius = fdlc.maxVertexRadius < 0 ? Math.max(2 * fdlc.minVertexRadius, Math.min(100, graph.getVertices().size())) : fdlc.maxVertexRadius;
 		assert(maxRadius >= minRadius);
 		double maxDegree = 1;
-		for(K k : graph.getNodes()) {
+		for(K k : graph.getVertices()) {
 			final int degree = graph.getNeighbors(k).size();
 			if(degree > maxDegree) maxDegree = degree;
 		}
@@ -47,10 +47,10 @@ public class ForceDirectedLayout<K extends Comparable<K>> {
 		while(itersRemaining-- > 0 && System.currentTimeMillis() <= endTime){
 			double totalDelta = 0;
 			
-			for(int i = 0; i < data.nodes.length; i++){
+			for(int i = 0; i < data.vertices.length; i++){
 				delta.x = delta.y = 0;
 				final Point2D.Double pos = data.positions[i];
-				for(int j = 0; j < data.nodes.length; j++)
+				for(int j = 0; j < data.vertices.length; j++)
 					if(i != j) repel(data, delta, i, j);
 				for(int j : data.neighbors[i])
 					attract(data, delta, i, j);
@@ -111,7 +111,7 @@ public class ForceDirectedLayout<K extends Comparable<K>> {
 	
 	protected static class GraphLayoutData<K extends Comparable<K>> { 
 		
-		public final K[] nodes;
+		public final K[] vertices;
 		public final int[][] neighbors;
 		public final int maxDegree;
 		public final Edge<K>[][] edges;
@@ -119,32 +119,32 @@ public class ForceDirectedLayout<K extends Comparable<K>> {
 		public Point2D.Double[] positions;
 		
 		@SuppressWarnings("unchecked")
-		private GraphLayoutData(Graph<K> g, Function<K, Double> nodeRadiusFunction){
-			nodes = g.getNodes().toArray((K[]) Array.newInstance(g.getNodes().iterator().next().getClass(), g.getNodes().size()));
-			Arrays.sort(nodes, Comparator.comparing(k -> String.valueOf(k)));
+		private GraphLayoutData(Graph<K> g, Function<K, Double> vertexRadiusFunction){
+			vertices = g.getVertices().toArray((K[]) Array.newInstance(g.getVertices().iterator().next().getClass(), g.getVertices().size()));
+			Arrays.sort(vertices, Comparator.comparing(k -> String.valueOf(k)));
 			
-			neighbors = new int[nodes.length][];
-			edges = new Edge[nodes.length][];
-			radii = new double[nodes.length];
+			neighbors = new int[vertices.length][];
+			edges = new Edge[vertices.length][];
+			radii = new double[vertices.length];
 
-			positions = new Point2D.Double[nodes.length];
+			positions = new Point2D.Double[vertices.length];
 
 			final HashMap<K, Integer> map = new HashMap<>();
 			double curCumulativeRadius = 0;
-			for(int i = 0; i < nodes.length; i++){
-				map.put(nodes[i], i);
+			for(int i = 0; i < vertices.length; i++){
+				map.put(vertices[i], i);
 				final Point2D.Double pos = new Point2D.Double(
 						Math.cos(Math.PI / 8 * i) * curCumulativeRadius,
 						Math.sin(Math.PI / 8 * i) * curCumulativeRadius
 						);
 				positions[i] = pos;
-				radii[i] = nodeRadiusFunction.apply(nodes[i]);
+				radii[i] = vertexRadiusFunction.apply(vertices[i]);
 				curCumulativeRadius += radii[i] / 4;
 				assert(radii[i] >= 1);
 			}
 			int maxDegree = 0;
-			for(int i = 0; i < nodes.length; i++){
-				final Collection<Edge<K>> edges = g.getNeighbors(nodes[i]);
+			for(int i = 0; i < vertices.length; i++){
+				final Collection<Edge<K>> edges = g.getNeighbors(vertices[i]);
 				final ArrayList<Edge<K>> edgesList = edges instanceof ArrayList ? (ArrayList<Edge<K>>) edges : new ArrayList<>(edges);
 				final int[] n = new int[edgesList.size()];
 				for(int j = 0; j < edgesList.size(); j++){

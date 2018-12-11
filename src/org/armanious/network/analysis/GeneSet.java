@@ -69,7 +69,7 @@ public class GeneSet {
 				}
 			}
 		}
-		return graph.getNodes().size() > 0;
+		return graph.getVertices().size() > 0;
 	}
 	
 }

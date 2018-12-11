@@ -276,14 +276,14 @@ public final class NetworkAnalysis {
 		return colorGradient(x, y, 0.5);
 	}
 
-	private static Function<Protein, Color> createNodeColorFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
-		final Color defaultColor = parseColorOrDefault(c.rendererConfig.defaultNodeColor, null);
+	private static Function<Protein, Color> createVertexColorFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
+		final Color defaultColor = parseColorOrDefault(c.rendererConfig.defaultVertexColor, null);
 		if(defaultColor == null)
 			throw new RuntimeException("At least the default color must be specified");
-		final Color group1Color = parseColorOrDefault(c.rendererConfig.group1NodeColor, defaultColor);
+		final Color group1Color = parseColorOrDefault(c.rendererConfig.group1VertexColor, defaultColor);
 
-		final Color group2Color = parseColorOrDefault(c.rendererConfig.group2NodeColor, defaultColor);
-		final Color mixedColor = parseColorOrDefault(c.rendererConfig.bothGroupsNodeColor, mixColors(group1Color, group2Color));
+		final Color group2Color = parseColorOrDefault(c.rendererConfig.group2VertexColor, defaultColor);
+		final Color mixedColor = parseColorOrDefault(c.rendererConfig.bothGroupsVertexColor, mixColors(group1Color, group2Color));
 
 		final Function<Protein, Color> f = p -> {
 			final boolean isGroup1 = group1.getUniqueProteins().contains(p);
@@ -294,7 +294,7 @@ public final class NetworkAnalysis {
 			else if(isGroup2) return group2Color;
 			return defaultColor;
 		};
-		final int LOWER_ALPHA_BOUND = c.rendererConfig.minNodeAlpha;
+		final int LOWER_ALPHA_BOUND = c.rendererConfig.minVertexAlpha;
 		final int UPPER_ALPHA_BOUND = 255;
 		final double MAXIMUM_NUM = graph.getMaxCount();
 
@@ -330,16 +330,16 @@ public final class NetworkAnalysis {
 				Math.min(graph.getCount(e.getSource()), graph.getCount(e.getTarget())) / MAXIMUM_NUM));
 	}
 
-	private static Function<Protein, Color> createNodeBorderColorFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
-		final Color group1Color = parseColorOrDefault(c.rendererConfig.group1NodeColor, Color.BLACK);
-		final Color group2Color = parseColorOrDefault(c.rendererConfig.group2NodeColor, Color.BLACK);
+	private static Function<Protein, Color> createVertexBorderColorFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
+		final Color group1Color = parseColorOrDefault(c.rendererConfig.group1VertexColor, Color.BLACK);
+		final Color group2Color = parseColorOrDefault(c.rendererConfig.group2VertexColor, Color.BLACK);
 		final Color[] colors = new Color[]{Color.BLACK, group1Color, group2Color};
 		return p -> {
 			return colors[getMultiColoredState(p, group1, group2, graph)];
 		};
 	}
 
-	private static Function<Protein, Float> createNodeBorderThicknessFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
+	private static Function<Protein, Float> createVertexBorderThicknessFunction(Configuration c, GeneSetMap group1, GeneSetMap group2, LayeredGraph<Protein> graph){
 		return p -> {
 			return getMultiColoredState(p, group1, group2, graph) == 0 ? 1f : 3f;
 		};
@@ -350,16 +350,16 @@ public final class NetworkAnalysis {
 				? new GUIRenderer<>(c.rendererConfig, new File(c.generalConfig.outputDirectory, clusterId))
 						: new Renderer<>(c.rendererConfig, new File(c.generalConfig.outputDirectory));
 				renderer.setLabelFunction(p -> p.getGene() == null ? p.getId() : p.getGene().getSymbol());
-				renderer.setNodeColorFunction(createNodeColorFunction(c, group1, group2, graph));
+				renderer.setVertexColorFunction(createVertexColorFunction(c, group1, group2, graph));
 				renderer.setEdgeColorFunction(createEdgeColorFunction(c, group1, group2, graph));
-				renderer.setNodeBorderColorFunction(createNodeBorderColorFunction(c, group1, group2, graph));
-				renderer.setNodeBorderThicknessFunction(createNodeBorderThicknessFunction(c, group1, group2, graph));
+				renderer.setVertexBorderColorFunction(createVertexBorderColorFunction(c, group1, group2, graph));
+				renderer.setVertexBorderThicknessFunction(createVertexBorderThicknessFunction(c, group1, group2, graph));
 				return renderer;
 	}
 	
 	static LayeredGraph<Protein> getReducedGraph(Configuration c, LayeredGraph<Protein> g, Collection<Protein> endpoints) {
-		final int maxNodes = (int) Math.ceil(Math.min(c.analysisConfig.fractionOfNodesToRender * g.getNodes().size(), c.analysisConfig.maxNodesToRender));
-		return (LayeredGraph<Protein>) g.reduceByPaths(endpoints, maxNodes);
+		final int maxVertices = (int) Math.ceil(Math.min(c.analysisConfig.fractionOfVerticesToRender * g.getVertices().size(), c.analysisConfig.maxVerticesToRender));
+		return (LayeredGraph<Protein>) g.reduceByPaths(endpoints, maxVertices);
 	}
 
 	static LayeredGraph<Protein> getReducedGraph(Configuration c, GeneSetMap gsm) {
@@ -371,21 +371,21 @@ public final class NetworkAnalysis {
 		final List<Tuple<LayeredGraph<Protein>, String>> toRender = new LinkedList<>();
 		
 		final LayeredGraph<Protein> group1Graph = getReducedGraph(c, group1);
-		if(group1Graph.getNodes().size() > 0)
+		if(group1Graph.getVertices().size() > 0)
 			toRender.add(new Tuple<>(group1Graph, "Group1"));
 
 		//TODO refactor code
 		if(group2.getGeneSetMap().size() > 0){
 
 			final LayeredGraph<Protein> group2Graph = getReducedGraph(c, group2);
-			if(group2Graph.getNodes().size() != 0){
+			if(group2Graph.getVertices().size() != 0){
 				toRender.add(new Tuple<>(group2Graph, "Group2"));
 
 				final LayeredGraph<Protein> combinedGraph = getReducedGraph(c, combined);
 				toRender.add(new Tuple<>(combinedGraph, "Group1AndGroup2"));
 
-				if(group1.getLayeredGraph().getNodes().size() > 0 &&
-						group2.getLayeredGraph().getNodes().size() > 0 &&
+				if(group1.getLayeredGraph().getVertices().size() > 0 &&
+						group2.getLayeredGraph().getVertices().size() > 0 &&
 						c.analysisConfig.calculateGraphDifferences){
 					final double numGroup1 = group1.getGeneSetMap().size();
 					final double numGroup2 = group2.getGeneSetMap().size();
@@ -396,13 +396,13 @@ public final class NetworkAnalysis {
 					final LayeredGraph<Protein> group1MinusGroup2 = getReducedGraph(c,
 							group1.getLayeredGraph().subtract(group2.getLayeredGraph(), group1ScalingFactor, group2ScalingFactor),
 							group1.getUniqueProteins());
-					if(group1MinusGroup2.getNodes().size() > 0)
+					if(group1MinusGroup2.getVertices().size() > 0)
 						toRender.add(new Tuple<>(group1MinusGroup2, "Group1MinusGroup2"));
 					final LayeredGraph<Protein> group2MinusGroup1 = getReducedGraph(
 							c,
 							group2.getLayeredGraph().subtract(group1.getLayeredGraph(), group2ScalingFactor, group1ScalingFactor),
 							group2.getUniqueProteins());
-					if(group2MinusGroup1.getNodes().size() > 0)
+					if(group2MinusGroup1.getVertices().size() > 0)
 						toRender.add(new Tuple<>(group2MinusGroup1, "Group2MinusGroup1"));
 				}
 			}
@@ -451,7 +451,7 @@ public final class NetworkAnalysis {
 		BufferedWriter out = new BufferedWriter(new FileWriter(interactionsOutputFile));
 		out.write("#source\ttarget\tweight (STRING score)");
 		out.newLine();
-		for(Protein p : graph.getNodes()){
+		for(Protein p : graph.getVertices()){
 			for(Edge<Protein> e : graph.getNeighbors(p)){
 				if(e.getSource().getId().compareTo(e.getTarget().getId()) > 0) continue;
 				out.write(e.getSource().getGene() == null ? e.getSource().getId() : e.getSource().getGene().getSymbol());
@@ -468,7 +468,7 @@ public final class NetworkAnalysis {
 		out = new BufferedWriter(new FileWriter(geneListOutputFile));
 		out.write("#gene\torigin\tcount");
 		out.newLine();
-		for(Protein p : graph.getNodes()){
+		for(Protein p : graph.getVertices()){
 			out.write(p.getGene() == null ? p.getId() : p.getGene().getSymbol());
 			out.write('\t');
 			final boolean isGroup1 = group1.getUniqueProteins().contains(p);
@@ -493,11 +493,11 @@ public final class NetworkAnalysis {
 	}
 
 	private static <K extends Comparable<K>> double calculateIntersectionOverUnionSimilarity(Graph<K> x, Graph<K> y){
-		final Set<K> union = new HashSet<>(x.getNodes());
-		union.addAll(y.getNodes());
+		final Set<K> union = new HashSet<>(x.getVertices());
+		union.addAll(y.getVertices());
 		if(union.size() == 0) return 0;
-		final Set<K> intersection = new HashSet<>(x.getNodes());
-		intersection.retainAll(y.getNodes());
+		final Set<K> intersection = new HashSet<>(x.getVertices());
+		intersection.retainAll(y.getVertices());
 
 		return (double) intersection.size() / union.size();
 	}
@@ -512,11 +512,11 @@ public final class NetworkAnalysis {
 		final Map<PhylogeneticTreeNode, ClusterAnalysis> remapping = new HashMap<>();
 		clusters.forEach((k, v) -> remapping.put(v.getNode(), v));
 
-		final Color defaultColor = parseColorOrDefault(c.rendererConfig.defaultNodeColor, null);
+		final Color defaultColor = parseColorOrDefault(c.rendererConfig.defaultVertexColor, null);
 		if(defaultColor == null)
 			throw new RuntimeException("At least the default color must be specified");
-		final Color group1color = parseColorOrDefault(c.rendererConfig.group1NodeColor, defaultColor);
-		final Color group2color = parseColorOrDefault(c.rendererConfig.group2NodeColor, defaultColor);
+		final Color group1color = parseColorOrDefault(c.rendererConfig.group1VertexColor, defaultColor);
+		final Color group2color = parseColorOrDefault(c.rendererConfig.group2VertexColor, defaultColor);
 
 		final Function<PhylogeneticTreeNode, Color> clusterEdgeColorFunction = ptn -> {
 			double group1Weight = 0;
@@ -565,7 +565,7 @@ public final class NetworkAnalysis {
 		
 		final Map<String, Set<Protein>> proteinSetMap = new HashMap<>();
 		for(String patient : geneSetMap.keySet()) {
-			final Set<Protein> patientProteinSet = new HashSet<>(geneSetMap.get(patient).getGraph().getNodes());
+			final Set<Protein> patientProteinSet = new HashSet<>(geneSetMap.get(patient).getGraph().getVertices());
 			proteinsSet.addAll(patientProteinSet);
 			proteinSetMap.put(patient, patientProteinSet);
 		}
@@ -661,8 +661,8 @@ public final class NetworkAnalysis {
 		if(c.analysisConfig.bootstrappingRounds != 0 && c.analysisConfig.bootstrappingRounds < 100) {
 			System.out.println("If bootstrapping, must specify at least 100 rounds. Skipping bootstrapping...");
 		} else {
+			System.out.println("Performing " + c.analysisConfig.bootstrappingRounds + " bootstrapping rounds");
 			for(int i = 0; i < c.analysisConfig.bootstrappingRounds; i++) {
-				System.out.println("Bootstrap round " + i);
 				treeRoot.updateWithBootstrapRound(generateBootstrappedTree(combined, leaves));
 			}
 		}
@@ -708,7 +708,7 @@ public final class NetworkAnalysis {
 		final String patientName = group1.getGeneSetMap().keySet().iterator().next();
 		System.out.println("\n\n\n---INPUT REQUIRED---\nCommand examples:\n"
 				+  patientName + ": Layout and render the pairwise paths graph of patient " + patientName + "\n"
-				+ "C5: Layout and render the summary graph of all nodes belonging to C5\n"
+				+ "C5: Layout and render the summary graph of all patients belonging to C5\n"
 				+ "info: Displays information for every cluster\n"
 				+ "info C17: Displays information for cluster C17\n"
 				+ "distance C12 C20: displays the mean dissimilarity between patients of C12 and C20\n"

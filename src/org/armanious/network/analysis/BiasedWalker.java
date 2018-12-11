@@ -19,9 +19,9 @@ public class BiasedWalker<K extends Comparable<K>> {
 	private final double restartProbability;
 
 	private long totalSteps = 0;
-	private final HashMap<K, Integer> nodeCounts = new HashMap<>();
-	private K curNode;
-	private K curStartNode;
+	private final HashMap<K, Integer> vertexCounts = new HashMap<>();
+	private K curVertex;
+	private K curStartVertex;
 	private ArrayList<K> curPath = new ArrayList<>();
 	private Set<ArrayList<K>> successfulPaths = new HashSet<>();
 
@@ -32,7 +32,7 @@ public class BiasedWalker<K extends Comparable<K>> {
 	}
 
 	private void restart(){
-		curStartNode = curNode = startVertices[random.nextInt(startVertices.length)];
+		curStartVertex = curVertex = startVertices[random.nextInt(startVertices.length)];
 		curPath.clear();
 	}
 
@@ -49,11 +49,11 @@ public class BiasedWalker<K extends Comparable<K>> {
 	}*/
 	public void run(int numSteps){
 		while(numSteps-- > 0){
-			if(curNode == null || random.nextDouble() <= restartProbability){
+			if(curVertex == null || random.nextDouble() <= restartProbability){
 				restart();
 			}else{
 				int sum = 0;
-				final Collection<Edge<K>> allCandidates = g.getNeighbors(curNode);
+				final Collection<Edge<K>> allCandidates = g.getNeighbors(curVertex);
 				
 				//Go anywhere version
 				for(Edge<K> edge : allCandidates)
@@ -77,7 +77,7 @@ public class BiasedWalker<K extends Comparable<K>> {
 					int r = random.nextInt(sum);
 					for(Edge<K> candidate : candidates){
 						if(r <= candidate.getWeight()){
-							curNode = candidate.getTarget();
+							curVertex = candidate.getTarget();
 							break;
 						}else{
 							r -= candidate.getWeight();
@@ -85,15 +85,15 @@ public class BiasedWalker<K extends Comparable<K>> {
 					}
 				}
 			}
-			if(curPath.add(curNode)){
-				nodeCounts.put(curNode, nodeCounts.getOrDefault(curNode, 0) + 1);
+			if(curPath.add(curVertex)){
+				vertexCounts.put(curVertex, vertexCounts.getOrDefault(curVertex, 0) + 1);
 				totalSteps++;
 			}
 
-			if(curNode != curStartNode){
+			if(curVertex != curStartVertex){
 				boolean successfulPath = false;
 				for(K end : startVertices){
-					if(curNode.equals(end)){
+					if(curVertex.equals(end)){
 						successfulPath = true;
 						break;
 					}
@@ -101,7 +101,7 @@ public class BiasedWalker<K extends Comparable<K>> {
 				if(successfulPath){
 					successfulPaths.add(curPath);
 					curPath = new ArrayList<>();// new HashSet<>();
-					curPath.add(curNode);
+					curPath.add(curVertex);
 				}
 			}
 			
@@ -117,9 +117,9 @@ public class BiasedWalker<K extends Comparable<K>> {
 	}
 
 	public HashMap<K, Double> getDistribution(double threshold){
-		final HashMap<K, Double> distribution = new HashMap<>(nodeCounts.size());
-		for(K k : nodeCounts.keySet()){
-			final double freq = (double) nodeCounts.get(k) / totalSteps;
+		final HashMap<K, Double> distribution = new HashMap<>(vertexCounts.size());
+		for(K k : vertexCounts.keySet()){
+			final double freq = (double) vertexCounts.get(k) / totalSteps;
 			if(freq >= threshold){
 				distribution.put(k, freq);
 			}
@@ -130,8 +130,8 @@ public class BiasedWalker<K extends Comparable<K>> {
 	/*
     ----CHANGES TO MAKE----
     Random walker:
-        2) prevent ``back-stepping" by only considering distribution using nodes that have not been visited
-            - if no neighboring node has not been visited, restart
+        2) prevent ``back-stepping" by only considering distribution using vertices that have not been visited
+            - if no neighboring vertex has not been visited, restart
         3) only increment counts upon a successful walk?
         4) continue until x successful walks?
 	 */

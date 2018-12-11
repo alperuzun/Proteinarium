@@ -179,10 +179,10 @@ public class RenderingUtils {
 				//g.drawRect(0, 0, LEGEND_WIDTH-1, LEGEND_HEIGHT-1);
 				final Color[] colors = new Color[]{
 						null,
-						NetworkAnalysis.parseColorOrDefault(rc.group1NodeColor, null),
-						NetworkAnalysis.parseColorOrDefault(rc.group2NodeColor, null),
-						NetworkAnalysis.parseColorOrDefault(rc.bothGroupsNodeColor, null),
-						NetworkAnalysis.parseColorOrDefault(rc.defaultNodeColor, null)};
+						NetworkAnalysis.parseColorOrDefault(rc.group1VertexColor, null),
+						NetworkAnalysis.parseColorOrDefault(rc.group2VertexColor, null),
+						NetworkAnalysis.parseColorOrDefault(rc.bothGroupsVertexColor, null),
+						NetworkAnalysis.parseColorOrDefault(rc.defaultVertexColor, null)};
 				final String[] labels = new String[]{
 						null,
 						"Group 1",
@@ -202,7 +202,7 @@ public class RenderingUtils {
 						}
 					}else{
 						final Color c1 = colors[i];
-						final Color c2 = new Color(c1.getRed(), c1.getGreen(), c1.getBlue(), rc.minNodeAlpha);
+						final Color c2 = new Color(c1.getRed(), c1.getGreen(), c1.getBlue(), rc.minVertexAlpha);
 						g.setPaint(new GradientPaint(
 								LEGEND_BAR_PADDING + LEGEND_BAR_WIDTH * (i + 0.5f), LEGEND_BAR_PADDING,
 								c1,

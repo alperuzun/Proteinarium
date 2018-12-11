@@ -56,7 +56,7 @@ public final class Configuration {
 			if(!activeDirectory.isEmpty() && !activeDirectory.endsWith(File.separator))
 				activeDirectory += File.separator;
 			this.activeDirectory = activeDirectory;
-
+			
 			String outputDirectory = map.getOrDefault("outputDirectory", activeDirectory + "output");
 			if(!outputDirectory.isEmpty() && !outputDirectory.endsWith(File.separator))
 				outputDirectory += File.separator;
@@ -134,8 +134,8 @@ public final class Configuration {
 		public final int maxPathLength;
 
 		//public final boolean layoutAndRender;
-		public final double fractionOfNodesToRender;
-		public final int maxNodesToRender;
+		public final double fractionOfVerticesToRender;
+		public final int maxVerticesToRender;
 		
 		public final int bootstrappingRounds;
 
@@ -149,8 +149,8 @@ public final class Configuration {
 			maxPathLength = Integer.parseInt(map.getOrDefault("maxPathLength", "5"));
 
 			//layoutAndRender = Boolean.parseBoolean(map.getOrDefault("layoutAndRender", "true"));
-			fractionOfNodesToRender = Double.parseDouble(map.getOrDefault("fractionOfNodesToRender", "1"));
-			maxNodesToRender = Integer.parseInt(map.getOrDefault("maxNodesToRender", String.valueOf(Integer.MAX_VALUE)));
+			fractionOfVerticesToRender = Double.parseDouble(map.getOrDefault("fractionOfVerticesToRender", "1"));
+			maxVerticesToRender = Integer.parseInt(map.getOrDefault("maxVerticesToRender", String.valueOf(Integer.MAX_VALUE)));
 			
 			bootstrappingRounds = Integer.parseInt(map.getOrDefault("bootstrappingRounds", "1000"));
 		}
@@ -162,24 +162,22 @@ public final class Configuration {
 		public final double repulsionConstant;
 		public final double attractionConstant;
 		public final double deltaThreshold;
-		public final double preferredPadding;
 
 		public final long maxIterations;
 		public final long maxTime;
 
-		public final double minNodeRadius;
-		public final double maxNodeRadius;
+		public final double minVertexRadius;
+		public final double maxVertexRadius;
 
 		public ForceDirectedLayoutConfig(Map<String, String> map){
 			repulsionConstant = Double.parseDouble(map.getOrDefault("repulsionConstant", "0.2"));
 			attractionConstant = Double.parseDouble(map.getOrDefault("attractionConstant", "0.0003"));
-			preferredPadding = Double.parseDouble(map.getOrDefault("preferredPadding", "5"));
 			deltaThreshold = Double.parseDouble(map.getOrDefault("deltaThreshold", "0.001"));
 			maxIterations = Long.parseLong(map.getOrDefault("maxIterations", "10000"));
 			maxTime = Long.parseLong(map.getOrDefault("maxTime", String.valueOf(Long.MAX_VALUE)));
 
-			minNodeRadius = Double.parseDouble(map.getOrDefault("minNodeRadius", "15"));
-			maxNodeRadius = Double.parseDouble(map.getOrDefault("maxNodeRadius", "-1"));
+			minVertexRadius = Double.parseDouble(map.getOrDefault("minVertexRadius", "15"));
+			maxVertexRadius = Double.parseDouble(map.getOrDefault("maxVertexRadius", "-1"));
 		}
 
 	}
@@ -188,15 +186,15 @@ public final class Configuration {
 		
 		public final boolean displayRendering;
 		
-		public final int minNodeAlpha;
+		public final int minVertexAlpha;
 		public final int minEdgeAlpha;
 		
 		public final boolean drawGeneSymbols;
 		
-		public final String defaultNodeColor;
-		public final String group1NodeColor;
-		public final String group2NodeColor;
-		public final String bothGroupsNodeColor;
+		public final String defaultVertexColor;
+		public final String group1VertexColor;
+		public final String group2VertexColor;
+		public final String bothGroupsVertexColor;
 
 		public final boolean colorSignificantBranchLabels;
 		public final double significanceThreshold;
@@ -206,15 +204,15 @@ public final class Configuration {
 		public RendererConfig(Map<String, String> map){
 			displayRendering = Boolean.parseBoolean(map.getOrDefault("performRendering", "true"));
 
-			minNodeAlpha = Integer.parseInt(map.getOrDefault("minNodeAlpha", "50"));
+			minVertexAlpha = Integer.parseInt(map.getOrDefault("minVertexAlpha", "50"));
 			minEdgeAlpha = Integer.parseInt(map.getOrDefault("minEdgeAlpha", "50"));
 			
 			drawGeneSymbols = Boolean.parseBoolean(map.getOrDefault("drawGeneSymbols", "true"));
 			
-			defaultNodeColor = map.getOrDefault("defaultNodeColor", "(255,0,0)"); //red
-			group1NodeColor = map.getOrDefault("group1NodeColor", "(255,200,0)"); //orange
-			group2NodeColor = map.getOrDefault("group2NodeColor", "(0,0,255)"); //blue
-			bothGroupsNodeColor = map.getOrDefault("bothGroupsNodeColor", "(0,255,0)"); //green
+			defaultVertexColor = map.getOrDefault("defaultVertexColor", "(255,0,0)"); //red
+			group1VertexColor = map.getOrDefault("group1VertexColor", "(255,200,0)"); //orange
+			group2VertexColor = map.getOrDefault("group2VertexColor", "(0,0,255)"); //blue
+			bothGroupsVertexColor = map.getOrDefault("bothGroupsVertexColor", "(0,255,0)"); //green
 
 			colorSignificantBranchLabels = Boolean.parseBoolean(map.getOrDefault("colorSignificantBranchLabels", "true"));
 			significanceThreshold = Double.parseDouble(map.getOrDefault("significanceThreshold", "0.05"));

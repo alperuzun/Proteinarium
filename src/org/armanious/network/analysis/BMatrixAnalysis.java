@@ -97,9 +97,9 @@ public class BMatrixAnalysis {
 		final DendrogramRenderer dr = new DendrogramRenderer(c.rendererConfig, new File(c.generalConfig.outputDirectory));
 		final Function<PhylogeneticTreeNode, Color> clusterEdgeColorFunction = ptn -> {
 			double group1weight = 0;
-			final PhylogeneticTreeNode[] nodeLeafs = ptn.getLeaves();
-			if(nodeLeafs.length > 0){
-				for(PhylogeneticTreeNode ptnLeaf : nodeLeafs)
+			final PhylogeneticTreeNode[] vertexLeafs = ptn.getLeaves();
+			if(vertexLeafs.length > 0){
+				for(PhylogeneticTreeNode ptnLeaf : vertexLeafs)
 					if(cases.containsKey(ptnLeaf.getLabel()))
 						group1weight += ptnLeaf.getWeight();
 			}else{

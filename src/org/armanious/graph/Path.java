@@ -28,17 +28,17 @@ public class Path<K> {
 		return new ArrayList<>(path);
 	}
 	
-	public List<K> getNodes(){
+	public List<K> getVertices(){
 		if(path.size() == 0) return Collections.emptyList();
-		final ArrayList<K> nodes = new ArrayList<>(path.size() > 0 ? path.size() + 1 : 0);
-		nodes.add(path.get(0).getSource());
-		for(Edge<K> edge : path) nodes.add(edge.getTarget());
-		return nodes;
+		final ArrayList<K> vertices = new ArrayList<>(path.size() > 0 ? path.size() + 1 : 0);
+		vertices.add(path.get(0).getSource());
+		for(Edge<K> edge : path) vertices.add(edge.getTarget());
+		return vertices;
 	}
 	
 	public Set<K> getUniqueNodes(){
 		if(path.size() == 0) return Collections.emptySet();
-		return new HashSet<>(getNodes());
+		return new HashSet<>(getVertices());
 	}
 	
 	@SuppressWarnings("unchecked")

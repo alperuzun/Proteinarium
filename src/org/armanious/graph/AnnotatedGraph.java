@@ -20,8 +20,8 @@ public class AnnotatedGraph<K extends Comparable<K>, T extends Comparable<T>> ex
 		return annotations.get(k);
 	}
 	
-	public void removeNode(K k){
-		super.removeNode(k);
+	public void removeVertex(K k){
+		super.removeVertex(k);
 		annotations.remove(k);
 	}
 	

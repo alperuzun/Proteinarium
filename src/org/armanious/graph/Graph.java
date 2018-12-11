@@ -31,12 +31,12 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		if(!neighbors.containsKey(edge.getSource())) neighbors.put(edge.getSource(), new HashSet<>());
 		neighbors.get(edge.getSource()).add(edge);
 		
-		// edges are added directionally, but we keep track of nodes in the graph by neighbors.keySet(),
-		// so just have an empty set of neighbors for "sink" nodes
+		// edges are added directionally, but we keep track of vertices in the graph by neighbors.keySet(),
+		// so just have an empty set of neighbors for "sink" vertices
 		if(!neighbors.containsKey(edge.getTarget())) neighbors.put(edge.getTarget(), new HashSet<>());
 	}
 	
-	public Collection<K> getNodes(){
+	public Collection<K> getVertices(){
 		return neighbors.keySet();
 	}
 	
@@ -45,7 +45,7 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		return neighbors.get(n);
 	}
 
-	public void removeNode(K k) {
+	public void removeVertex(K k) {
 		neighbors.remove(k);
 		for(HashSet<Edge<K>> edges : neighbors.values()){
 			final Iterator<Edge<K>> iter = edges.iterator();
@@ -74,9 +74,9 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 	
 	public final void addEdge(K src, K target, int weight, boolean bidirectional){
 		if(src == null || target == null)
-			throw new IllegalArgumentException("Both source and target nodes of an edge must be non-null");
+			throw new IllegalArgumentException("Both source and target vertices of an edge must be non-null");
 		if(src == target || src.equals(target))
-			throw new IllegalArgumentException("The src and target nodes cannot be the same");
+			throw new IllegalArgumentException("The src and target vertices cannot be the same");
 		addEdge(new Edge<>(src, target, weight));
 		if(bidirectional) addEdge(new Edge<>(target, src, weight));
 	}
@@ -157,11 +157,11 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		return new Graph<>(maxPathCost, maxPathLength);
 	}
 	
-	public Graph<K> reduceByPaths(Collection<K> endpoints, int maxNodes) {
-		return reduceByPaths(endpoints, maxNodes, true);
+	public Graph<K> reduceByPaths(Collection<K> endpoints, int maxVertices) {
+		return reduceByPaths(endpoints, maxVertices, true);
 	}
 	
-	public Graph<K> reduceByPaths(Collection<K> endpoints, int maxNodes, boolean bidirectional) {
+	public Graph<K> reduceByPaths(Collection<K> endpoints, int maxVertices, boolean bidirectional) {
 		final Graph<K> g = emptyGraph();
 		if(endpoints.size() < 2) return g;
 		
@@ -173,38 +173,38 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		
 		validEndpoints.sort(Comparator.comparingInt(t -> -getReductionMetric(t)));
 		
-		HashSet<K> containedNodes = new HashSet<>();
-		containedNodes.add(validEndpoints.get(0));
+		HashSet<K> containedVertices = new HashSet<>();
+		containedVertices.add(validEndpoints.get(0));
 		
 		for(int nextEndpointToAdd = 1;
-				nextEndpointToAdd < validEndpoints.size() && containedNodes.size() < maxNodes;
+				nextEndpointToAdd < validEndpoints.size() && containedVertices.size() < maxVertices;
 				nextEndpointToAdd++) {
 			final LinkedList<Path<K>> pathsToAdd = new LinkedList<>();
-			final HashSet<K> newNodes = new HashSet<>();
+			final HashSet<K> newVertices = new HashSet<>();
 			for(int prevEndpoint = 0; prevEndpoint < nextEndpointToAdd; prevEndpoint++) {
 				final Path<K> pathToAdd = findPath(validEndpoints.get(prevEndpoint), validEndpoints.get(nextEndpointToAdd));
 				pathsToAdd.add(pathToAdd);
 				for(Edge<K> edge : pathToAdd.getEdges()) {
-					newNodes.add(edge.getSource());
-					newNodes.add(edge.getTarget());
+					newVertices.add(edge.getSource());
+					newVertices.add(edge.getTarget());
 				}
 			}
-			if(containedNodes.size() + newNodes.size() > maxNodes) break;
+			if(containedVertices.size() + newVertices.size() > maxVertices) break;
 			for(Path<K> pathToAdd : pathsToAdd) {
 				for(Edge<K> edge : pathToAdd.getEdges()) {
 					g.addEdge(edge);
 					if(bidirectional) g.addEdge(edge.getTarget(), edge.getSource(), edge.getWeight());
 				}
 			}
-			containedNodes.addAll(newNodes);
+			containedVertices.addAll(newVertices);
 		}
 		return g;
 	}
 
-	public double getLocalClusteringCoefficient(K node){
+	public double getLocalClusteringCoefficient(K vertex){
 		// implementation of
 		// https://en.wikipedia.org/wiki/Clustering_coefficient#Network_average_clustering_coefficient
-		final Set<K> neighbors = getNeighbors(node).stream().map(edge -> edge.getTarget()).collect(Collectors.toSet());
+		final Set<K> neighbors = getNeighbors(vertex).stream().map(edge -> edge.getTarget()).collect(Collectors.toSet());
 		if(neighbors.size() <= 1) return 0;
 		
 		double triangles = 0;
@@ -220,11 +220,11 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 	public double getGlobalClusteringCoefficient(){
 		// implementation of
 		// https://en.wikipedia.org/wiki/Clustering_coefficient#Network_average_clustering_coefficient
-		final Collection<K> nodes = getNodes();
-		if(nodes.size() == 0) return 0;
+		final Collection<K> vertices = getVertices();
+		if(vertices.size() == 0) return 0;
 		double sum = 0;
-		for(K node : nodes) sum += getLocalClusteringCoefficient(node);
-		return sum / nodes.size();
+		for(K vertex : vertices) sum += getLocalClusteringCoefficient(vertex);
+		return sum / vertices.size();
 	}
 	
 	@Override

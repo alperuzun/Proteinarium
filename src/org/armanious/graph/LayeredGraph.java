@@ -40,20 +40,20 @@ public final class LayeredGraph<K extends Comparable<K>> extends AnnotatedGraph<
 	public void addGraph(Graph<K> graph){
 		if(graph instanceof LayeredGraph)
 			throw new UnsupportedOperationException("Cannot layer LayeredGraphs");
-		for(K k : graph.getNodes())
+		for(K k : graph.getVertices())
 			for(Edge<K> e : graph.getNeighbors(k))
 				addEdgeNoIncrement(e);
-		for(K k : graph.getNodes()){
+		for(K k : graph.getVertices()){
 			setCount(k, getCount(k) + 1);
 		}
 	}
 
-	public double getCount(K node){
-		return getAnnotation(node);
+	public double getCount(K vertex){
+		return getAnnotation(vertex);
 	}
 
-	public void setCount(K node, double count){
-		setAnnotation(node, count);
+	public void setCount(K vertex, double count){
+		setAnnotation(vertex, count);
 		if(count > maxCount) maxCount = count;
 	}
 
@@ -65,15 +65,15 @@ public final class LayeredGraph<K extends Comparable<K>> extends AnnotatedGraph<
 		final LayeredGraph<K> result = new LayeredGraph<>(type == Type.GROUP1 ? Type.GROUP1_MINUS_GROUP2 : Type.GROUP2_MINUS_GROUP1, maxPathCost, maxPathLength);
 		final HashSet<K> toRetain = new HashSet<>();
 		
-		for(K node : getNodes())
-			if(!lg.getNodes().contains(node) || lhsFactor * getCount(node) > rhsFactor * lg.getCount(node))
-				toRetain.add(node);
-		for(K node : toRetain)
-			for(Edge<K> edge : neighbors.get(node))
+		for(K vertex : getVertices())
+			if(!lg.getVertices().contains(vertex) || lhsFactor * getCount(vertex) > rhsFactor * lg.getCount(vertex))
+				toRetain.add(vertex);
+		for(K vertex : toRetain)
+			for(Edge<K> edge : neighbors.get(vertex))
 				if(toRetain.contains(edge.getSource()) && toRetain.contains(edge.getTarget()))
 					result.addEdge(edge);
-		for(K node : toRetain)
-			result.setCount(node, lhsFactor * getCount(node) - rhsFactor * (lg.getNodes().contains(node) ? lg.getCount(node) : 0));
+		for(K vertex : toRetain)
+			result.setCount(vertex, lhsFactor * getCount(vertex) - rhsFactor * (lg.getVertices().contains(vertex) ? lg.getCount(vertex) : 0));
 		return result;
 	}
 
@@ -86,8 +86,8 @@ public final class LayeredGraph<K extends Comparable<K>> extends AnnotatedGraph<
 		g = super.subgraphWithEdges(g, edges);
 		if(g instanceof LayeredGraph){
 			final LayeredGraph<K> lg = (LayeredGraph<K>) g;
-			for(K node : lg.getNodes())
-				lg.setCount(node, getCount(node));
+			for(K vertex : lg.getVertices())
+				lg.setCount(vertex, getCount(vertex));
 		}
 		return g;
 	}

@@ -18,12 +18,12 @@ public class HeatGraph<K extends Comparable<K>> extends AnnotatedGraph<K, Double
 
 	private static final double STANDARD_DIFFUSION_THRESHOLD = 1E-5;
 	
-	public void setHeat(K node, double heat){
-		setAnnotation(node, heat);
+	public void setHeat(K vertex, double heat){
+		setAnnotation(vertex, heat);
 	}
 	
-	public double getHeat(K node){
-		return getAnnotation(node);
+	public double getHeat(K vertex){
+		return getAnnotation(vertex);
 	}
 	
 	public void diffuseHeat(){
@@ -33,13 +33,13 @@ public class HeatGraph<K extends Comparable<K>> extends AnnotatedGraph<K, Double
 	public void diffuseHeat(double threshold, int maxIterations){
 		//int numIters = 0;
 		HashMap<K, Double> heatMap = new HashMap<>();
-		for(K node : getNodes()) heatMap.put(node, getHeat(node));
+		for(K vertex : getVertices()) heatMap.put(vertex, getHeat(vertex));
 		while(maxIterations < 0 || maxIterations-- > 0){
 			final Tuple<HashMap<K, Double>, Double> res = diffuseHeatIteration(heatMap);
 			heatMap = res.val1();
 			if(res.val2() <= threshold) break;
 		}
-		for(K node : getNodes()) setHeat(node, heatMap.get(node));
+		for(K vertex : getVertices()) setHeat(vertex, heatMap.get(vertex));
 		//System.out.println(numIters);
 	}
 	
@@ -47,12 +47,12 @@ public class HeatGraph<K extends Comparable<K>> extends AnnotatedGraph<K, Double
 		HashMap<K, Double> nextHeatMap = new HashMap<>();
 		
 		final Function<K, Double> diffusivityFunction = k -> 0.5D;
-		for(K node : getNodes()){
-			if(!nextHeatMap.containsKey(node)) nextHeatMap.put(node, heatMap.get(node));
+		for(K vertex : getVertices()){
+			if(!nextHeatMap.containsKey(vertex)) nextHeatMap.put(vertex, heatMap.get(vertex));
 			
-			final double diffusitivity = diffusivityFunction.apply(node);
-			final double toDiffuse = heatMap.get(node) * diffusitivity;
-			final Collection<Edge<K>> edges = getNeighbors(node);
+			final double diffusitivity = diffusivityFunction.apply(vertex);
+			final double toDiffuse = heatMap.get(vertex) * diffusitivity;
+			final Collection<Edge<K>> edges = getNeighbors(vertex);
 			int sum = 0;
 			for(Edge<K> edge : edges){
 				if(!nextHeatMap.containsKey(edge.getTarget())) nextHeatMap.put(edge.getTarget(), heatMap.get(edge.getTarget()));
@@ -62,7 +62,7 @@ public class HeatGraph<K extends Comparable<K>> extends AnnotatedGraph<K, Double
 				final double ratio = edge.getWeight() / (double) sum;
 				final double diffused = ratio * toDiffuse;
 				nextHeatMap.put(edge.getTarget(), nextHeatMap.get(edge.getTarget()) + diffused);
-				nextHeatMap.put(node, nextHeatMap.get(node) - diffused);
+				nextHeatMap.put(vertex, nextHeatMap.get(vertex) - diffused);
 			}
 		}
 		double sumDelta = 0;

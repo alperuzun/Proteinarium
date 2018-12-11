@@ -30,14 +30,14 @@ public class Renderer<K extends Comparable<K>> {
 	private Function<K, String> labelFunction = k -> String.valueOf(k);
 	private Function<K, Color> labelColorFunction = k -> Color.BLACK;
 
-	private Function<K, Color> nodeColorFunction = k -> Color.RED;
-	//private Function<K, Float> nodeOpaquenessFunction = k -> 1f;
+	private Function<K, Color> vertexColorFunction = k -> Color.RED;
+	//private Function<K, Float> vertexOpaquenessFunction = k -> 1f;
 
 	private Function<Edge<K>, Color> edgeColorFunction = k -> Color.BLACK;
 	private Function<Edge<K>, Float> edgeThicknessFunction = k -> 1f;
 
-	private Function<K, Color> nodeBorderColorFunction = k -> Color.BLACK;
-	private Function<K, Float> nodeBorderThicknessFunction = k -> 1f;
+	private Function<K, Color> vertexBorderColorFunction = k -> Color.BLACK;
+	private Function<K, Float> vertexBorderThicknessFunction = k -> 1f;
 
 	public Renderer(RendererConfig rc, File outputDirectory){
 		this.outputDirectory = outputDirectory;
@@ -57,12 +57,12 @@ public class Renderer<K extends Comparable<K>> {
 		this.labelColorFunction = labelColorFunction;
 	}
 
-	public void setNodeColorFunction(Function<K, Color> nodeColorFunction){
-		this.nodeColorFunction = nodeColorFunction;
+	public void setVertexColorFunction(Function<K, Color> vertexColorFunction){
+		this.vertexColorFunction = vertexColorFunction;
 	}
 
-	/*public void setNodeOpaquenessFunction(Function<K, Float> nodeOpaquenessFunction){
-		this.nodeOpaquenessFunction = nodeOpaquenessFunction;
+	/*public void setVertexOpaquenessFunction(Function<K, Float> vertexOpaquenessFunction){
+		this.vertexOpaquenessFunction = vertexOpaquenessFunction;
 	}*/
 
 	public void setEdgeColorFunction(Function<Edge<K>, Color> edgeColorFunction){
@@ -73,12 +73,12 @@ public class Renderer<K extends Comparable<K>> {
 		this.edgeThicknessFunction = edgeThicknessFunction;
 	}
 
-	public void setNodeBorderColorFunction(Function<K, Color> nodeBorderColorFunction){
-		this.nodeBorderColorFunction = nodeBorderColorFunction;
+	public void setVertexBorderColorFunction(Function<K, Color> vertexBorderColorFunction){
+		this.vertexBorderColorFunction = vertexBorderColorFunction;
 	}
 
-	public void setNodeBorderThicknessFunction(Function<K, Float> nodeBorderThicknessFunction){
-		this.nodeBorderThicknessFunction = nodeBorderThicknessFunction;
+	public void setVertexBorderThicknessFunction(Function<K, Float> vertexBorderThicknessFunction){
+		this.vertexBorderThicknessFunction = vertexBorderThicknessFunction;
 	}
 
 	BufferedImage generateBufferedImage(GraphLayoutData<K> data, String name){
@@ -128,30 +128,30 @@ public class Renderer<K extends Comparable<K>> {
 				g.draw(line);
 			}
 		}
-		final Ellipse2D.Double node = new Ellipse2D.Double();
+		final Ellipse2D.Double vertex = new Ellipse2D.Double();
 		
 		g.setFont(new Font("Dialog", Font.PLAIN, 12));
 		final FontMetrics metrics = g.getFontMetrics();
 		
 		for(int i = 0; i < positions.length; i++){
-			node.setFrame(positions[i].x - data.radii[i], positions[i].y - data.radii[i], data.radii[i] * 2, data.radii[i] * 2);
-			g.setColor(nodeColorFunction.apply(data.nodes[i]));
+			vertex.setFrame(positions[i].x - data.radii[i], positions[i].y - data.radii[i], data.radii[i] * 2, data.radii[i] * 2);
+			g.setColor(vertexColorFunction.apply(data.vertices[i]));
 			g.setComposite(AlphaComposite.Clear);
-			g.fill(node);
+			g.fill(vertex);
 			g.setComposite(AlphaComposite.SrcOver);
-			g.fill(node);
-			g.setColor(nodeBorderColorFunction.apply(data.nodes[i]));
-			g.setStroke(new BasicStroke(nodeBorderThicknessFunction.apply(data.nodes[i])));
-			g.draw(node);
+			g.fill(vertex);
+			g.setColor(vertexBorderColorFunction.apply(data.vertices[i]));
+			g.setStroke(new BasicStroke(vertexBorderThicknessFunction.apply(data.vertices[i])));
+			g.draw(vertex);
 			
 			if(rc.drawGeneSymbols){
-				final String nodeLabel = labelFunction.apply(data.nodes[i]);
-				//nodeLabel += " (" + data.neighbors[i].length + ", " + Math.round(data.radii[i]*100)/100.0 + ")";
-				final int strWidth = metrics.stringWidth(nodeLabel);
+				final String vertexLabel = labelFunction.apply(data.vertices[i]);
+				//vertexLabel += " (" + data.neighbors[i].length + ", " + Math.round(data.radii[i]*100)/100.0 + ")";
+				final int strWidth = metrics.stringWidth(vertexLabel);
 				final int strHeight = metrics.getHeight();
-				g.setColor(labelColorFunction.apply(data.nodes[i]));
+				g.setColor(labelColorFunction.apply(data.vertices[i]));
 				//TODO FIXME change font until (and cache results) until size fits
-				g.drawString(nodeLabel,
+				g.drawString(vertexLabel,
 						(float) (positions[i].x - data.radii[i] * 0.9 + (1.8 * data.radii[i] - strWidth) * 0.5),
 						(float) (positions[i].y - strHeight * 0.5 + metrics.getAscent()));
 			}
