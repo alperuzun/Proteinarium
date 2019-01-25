@@ -31,6 +31,8 @@ public final class Configuration {
 
 		public final String proteinInteractomeFile;
 		public final String proteinAliasesFile;
+		
+		public final String stringDatabaseVersion;
 
 		// public final boolean multiThreaded = false;
 
@@ -87,36 +89,24 @@ public final class Configuration {
 				}
 			}
 			this.projectName = projectName;
-
-			String version = "10.5";
-			try{
-				final Pattern p = Pattern.compile(">\\s*(\\d+\\.\\d+)\\s*<");
-				final URL url = new URL("https://string-db.org");
-				try(final BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()))){
-					String s;
-					while((s = br.readLine()) != null){
-						if(s.toLowerCase().contains("version")){
-							s += br.readLine();
-							final Matcher m = p.matcher(s);
-							if(m.find())
-								version = m.group(1);
-							break;
-						}
-					}
-				}
-			}catch(IOException ignored){}
-
+			
+			
+			this.stringDatabaseVersion = map.getOrDefault("stringDatabaseVersion", "11.0");
+			
 			proteinInteractomeFile = map.getOrDefault("proteinInteractomeFile",
-					new File(System.getProperty("user.dir"), "9606.protein.links.v" + version + ".txt.gz").getPath());
+					new File(System.getProperty("user.dir"), "9606.protein.links.v" + stringDatabaseVersion + ".txt.gz").getPath());
 			proteinAliasesFile = map.getOrDefault("proteinAliasesFile",
-					new File(System.getProperty("user.dir"), "9606.protein.aliases.v" + version + ".txt.gz").getPath());
+					new File(System.getProperty("user.dir"), "9606.protein.aliases.v" + stringDatabaseVersion + ".txt.gz").getPath());
 			try {
 				if(!new File(proteinInteractomeFile).exists())
-					downloadURLToFile("https://stringdb-static.org/download/protein.links.v" + version + "/9606.protein.links.v" + version + ".txt.gz", proteinInteractomeFile);
-									  //"https://stringdb-static.org/download/protein.aliases.v10.5/9606.protein.aliases.v10.5.txt.gz"
+					downloadURLToFile("https://stringdb-static.org/download/protein.links.v" + stringDatabaseVersion + "/9606.protein.links.v" + stringDatabaseVersion + ".txt.gz", proteinInteractomeFile);
 				if(!new File(proteinAliasesFile).exists())
-					downloadURLToFile("https://stringdb-static.org/download/protein.aliases.v10.5/9606.protein.aliases.v10.5.txt.gz", proteinAliasesFile);
+					downloadURLToFile("https://stringdb-static.org/download/protein.aliases.v" + stringDatabaseVersion + "/9606.protein.aliases.v" + stringDatabaseVersion + ".txt.gz", proteinAliasesFile);
 			} catch (IOException e) {
+				System.err.println("Error downloading STRING database files. Please download 9606.protein.links.v" 
+							+ stringDatabaseVersion + ".txt.gz and 9606.protein.aliases.v" + stringDatabaseVersion 
+							+ ".txt.gz from their website and specify the file paths in the configuration file under"
+							+ " proteinInteractomeFile and proteinAliasesFile, respectively.");
 				throw new RuntimeException(e);
 			}
 		}

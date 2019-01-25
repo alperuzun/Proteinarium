@@ -76,7 +76,7 @@ public class Graph<K extends Comparable<K>> implements Pathfinder<K> {
 		if(src == null || target == null)
 			throw new IllegalArgumentException("Both source and target vertices of an edge must be non-null");
 		if(src == target || src.equals(target))
-			throw new IllegalArgumentException("The src and target vertices cannot be the same");
+			throw new IllegalArgumentException("The source and target vertices cannot be the same");
 		addEdge(new Edge<>(src, target, weight));
 		if(bidirectional) addEdge(new Edge<>(target, src, weight));
 	}

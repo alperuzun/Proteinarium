@@ -65,19 +65,28 @@ public class Gene {
 		String s;
 		final Map<String, Gene> geneMap = new HashMap<>();
 		final Map<String, Protein> proteinMap = new HashMap<>();
+		final Map<String, String> synonyms = new HashMap<>();
 		while((s = br.readLine()) != null){
 			if(s.startsWith("#")) continue;
 			final String[] parts = s.split("\t");
-			if(parts[2].contains("BLAST_KEGG_NAME")){
+			if(parts[2].contains("BioMart_HUGO")){
 				final String symbol = parts[1];
 				final String protein = parts[0];
 				Gene gene = geneMap.get(symbol);
 				if(gene == null)
 					geneMap.put(symbol, gene = new Gene(symbol));
 				proteinMap.put(protein, gene.addProtein(protein));
+			}else if(parts[2].contains("BLAST_KEGG_NAME")) {
+				synonyms.put(parts[1], parts[0]);
 			}
 		}
 		br.close();
+		for(String synonym : synonyms.keySet()) {
+			final Protein protein = proteinMap.get(synonyms.get(synonym));
+			if(protein != null && !geneMap.containsKey(synonym)) {
+				geneMap.put(synonym, protein.getGene());
+			}
+		}
 		return new Tuple<>(geneMap, proteinMap);
 	}
 
