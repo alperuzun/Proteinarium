@@ -175,7 +175,6 @@ public class DendrogramRenderer {
 
 		g.setFont(new Font("Dialog", Font.PLAIN, 12));
 		
-		System.out.println("THRESHOLD: " + mtc);
 		while(!toDraw.isEmpty()){
 			final PhylogeneticTreeNode curNode = toDraw.remove();
 			final Point2D.Double cur = locations.get(curNode);

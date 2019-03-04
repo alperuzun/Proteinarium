@@ -52,18 +52,16 @@ public final class NetworkAnalysis {
 		final double maxPathCost = c.analysisConfig.maxPathCost;
 		final int maxPathLength = c.analysisConfig.maxPathLength;
 		GeneSetMap group1 = GeneSetMap.loadFromFile(c.generalConfig.group1GeneSetFile, database, LayeredGraph.Type.GROUP1, maxPathCost, maxPathLength);
-		GeneSetMap group2;
-		GeneSetMap combined;
+		GeneSetMap group2;			
+		final Map<String, GeneSet> combinedMap = new HashMap<>();
+		combinedMap.putAll(group1.getGeneSetMap());
 		if(c.generalConfig.group2GeneSetFile != null) {
 			group2 = GeneSetMap.loadFromFile(c.generalConfig.group2GeneSetFile, database, LayeredGraph.Type.GROUP2, maxPathCost, maxPathLength);
-			final Map<String, GeneSet> combinedMap = new HashMap<>();
-			combinedMap.putAll(group1.getGeneSetMap());
 			combinedMap.putAll(group2.getGeneSetMap());
-			combined = GeneSetMap.fromExistingMap(combinedMap, LayeredGraph.Type.COMBINED, maxPathCost, maxPathLength);
 		}else {
 			group2 = new GeneSetMap(LayeredGraph.Type.GROUP2, maxPathCost, maxPathLength);
-			combined = new GeneSetMap(LayeredGraph.Type.COMBINED, maxPathCost, maxPathLength);
 		}
+		final GeneSetMap combined = GeneSetMap.fromExistingMap(combinedMap, LayeredGraph.Type.COMBINED, maxPathCost, maxPathLength);
 
 		run(c, group1, group2, combined, proteinMap);
 	}
@@ -83,11 +81,6 @@ public final class NetworkAnalysis {
 	}
 
 	public static void run(Configuration c, GeneSetMap group1, GeneSetMap group2, GeneSetMap combined, Map<String, Protein> proteinMap) throws IOException {
-		if(group2 == null)
-			group2 = new GeneSetMap(LayeredGraph.Type.GROUP2, c.analysisConfig.maxPathCost, c.analysisConfig.maxPathLength);
-		if(combined == null)
-			combined = new GeneSetMap(LayeredGraph.Type.COMBINED, c.analysisConfig.maxPathCost, c.analysisConfig.maxPathLength);
-
 		for(String group1Key : group1.getGeneSetMap().keySet()){
 			if(group2.getGeneSetMap().keySet().contains(group1Key)){
 				System.err.println("Cannot have duplicate patient identifier: " + group1Key);

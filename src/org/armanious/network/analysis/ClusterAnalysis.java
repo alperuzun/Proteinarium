@@ -194,6 +194,7 @@ public class ClusterAnalysis {
 		final String[] headers = {
 				"Cluster Id",
 				"Average Distance (Height)",
+				"Bootstrapping Confidence Level",
 				"Total Number of Patients",
 				"Number in Group 1",
 				"Number in Group 2",

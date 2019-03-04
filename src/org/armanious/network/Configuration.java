@@ -7,7 +7,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLConnection;
@@ -15,10 +14,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public final class Configuration {
+	
+	public static boolean GETTING_DEFAULT_OPTIONS = false;
 
 	public static final class GeneralConfig {
 
@@ -68,12 +67,16 @@ public final class Configuration {
 			
 			
 			String group1GeneSetGroupFile = map.get("group1GeneSetFile");
-			if(group1GeneSetGroupFile != null)
-				if(!new File(group1GeneSetGroupFile).isAbsolute())
-					group1GeneSetGroupFile = activeDirectory + group1GeneSetGroupFile;
+			if(group1GeneSetGroupFile == null || group1GeneSetGroupFile.isEmpty()) {
+				throw new RuntimeException("must specify group1GeneSetGroupFile");
+			}
+			if(!new File(group1GeneSetGroupFile).isAbsolute())
+				group1GeneSetGroupFile = activeDirectory + group1GeneSetGroupFile;
 			this.group1GeneSetFile = group1GeneSetGroupFile;
 			
 			String group2GeneSetGroupFile = map.get("group2GeneSetFile");
+			if(group2GeneSetGroupFile != null && group2GeneSetGroupFile.isEmpty())
+				group2GeneSetGroupFile = null;
 			if(group2GeneSetGroupFile != null)
 				if(!new File(group2GeneSetGroupFile).isAbsolute())
 					group2GeneSetGroupFile = activeDirectory + group2GeneSetGroupFile;
@@ -97,6 +100,8 @@ public final class Configuration {
 					new File(System.getProperty("user.dir"), "9606.protein.links.v" + stringDatabaseVersion + ".txt.gz").getPath());
 			proteinAliasesFile = map.getOrDefault("proteinAliasesFile",
 					new File(System.getProperty("user.dir"), "9606.protein.aliases.v" + stringDatabaseVersion + ".txt.gz").getPath());
+			
+			if(GETTING_DEFAULT_OPTIONS) return;
 			try {
 				if(!new File(proteinInteractomeFile).exists())
 					downloadURLToFile("https://stringdb-static.org/download/protein.links.v" + stringDatabaseVersion + "/9606.protein.links.v" + stringDatabaseVersion + ".txt.gz", proteinInteractomeFile);
@@ -242,14 +247,16 @@ public final class Configuration {
 			final Map<String, String> map = new HashMap<>();
 			String s;
 			while((s = br.readLine()) != null){
-				if(s.startsWith("#") || s.startsWith("//")) continue;
+				if(s.startsWith("#") || s.startsWith("//") || s.trim().isEmpty()) continue;
 				final int idx = s.indexOf('=');
 				if(idx == -1)
-					throw new RuntimeException("Configuration file " + file + " is invalid: \"" + s + "\"");
+					throw new RuntimeException("Configuration file " + file + " is invalid: \"" + s + "\"\n"
+							+ "\n\tMust have the form <configOption>=<value>\n"
+							+ "\tExample: maxPathLength=4");
 
-				final String prevVal = map.put(s.substring(0, idx), s.substring(idx + 1));
+				final String prevVal = map.put(s.substring(0, idx).trim(), s.substring(idx + 1).trim());
 				if(prevVal != null)
-					throw new RuntimeException("Configuration file " + file + " is invalid: key \"" + s.substring(0, idx) + "\" appears more than once");
+					throw new RuntimeException("Configuration file " + file + " is invalid: option \"" + s.substring(0, idx) + "\" appears more than once");
 			}
 			return Configuration.fromMap(map);
 		}
@@ -260,8 +267,10 @@ public final class Configuration {
 		for(String arg : args){
 			final int idx = arg.indexOf('=');
 			if(idx == -1)
-				throw new RuntimeException("Argument \"" + arg + "\" is invalid");
-			map.put(arg.substring(0, idx), arg.substring(idx + 1));
+				throw new RuntimeException("Configuration option \"" + arg + "\" is invalid\n"
+						+ "\tMust have the form <configOption>=<value>\n"
+						+ "\tExample: maxPathLength=4");
+			map.put(arg.substring(0, idx).trim(), arg.substring(idx + 1).trim());
 		}
 		return Configuration.fromMap(map);
 	}
