@@ -46,8 +46,8 @@ public class Entry {
 	private static void printHelp(int exitCode) {
 		System.out.println("To specify a config file, supply config=<filename> as the first argument.\n"
 		+ "Othwerwise, you may specify individual config options in the form <configOption>=<value>");
-		System.out.println("\t-h\t--help\t\tPrints out this help message");
-		System.out.println("\t-o\t--options\tPrints out all available options");
+		System.out.println("\t-h\t--help\t\t\tPrints out this help message");
+		System.out.println("\t-o\t--options\t\tPrints out all available options");
 		System.out.println("\t-d\t--default-config\tPrints out the default configuration in the format expected");
 		System.exit(exitCode);
 	}
