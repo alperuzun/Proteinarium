@@ -1,13 +1,7 @@
-
-*.png
-
 *.class
-
 *.prefs
-
 .project
-
 .classpath
-
 *.txt
 .DS_Store
+bin/

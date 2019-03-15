@@ -194,11 +194,10 @@ public class RenderingUtils {
 				final Consumer<Integer> ithLegendBar = (i) -> {
 					if(i == 0){
 						try {
-							final BufferedImage cur = ImageIO.read(new File("count_gradient.png"));
+							final BufferedImage cur = ImageIO.read(RenderingUtils.class.getResource("/resources/count_gradient.png"));
 							g.drawImage(cur, LEGEND_BAR_PADDING + (LEGEND_BAR_WIDTH + LEGEND_BAR_PADDING) * i, LEGEND_BAR_PADDING, null);
 						} catch (IOException e) {
-							System.err.println("Error reading count_gradient.png; the legend in all images will be affected");
-							return; //e.printStackTrace();
+							return;
 						}
 					}else{
 						final Color c1 = colors[i];
