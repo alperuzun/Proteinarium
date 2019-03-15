@@ -51,13 +51,26 @@ public final class NetworkAnalysis {
 		}
 		final double maxPathCost = c.analysisConfig.maxPathCost;
 		final int maxPathLength = c.analysisConfig.maxPathLength;
-		GeneSetMap group1 = GeneSetMap.loadFromFile(c.generalConfig.group1GeneSetFile, database, LayeredGraph.Type.GROUP1, maxPathCost, maxPathLength);
+		GeneSetMap group1;
+		try {
+			group1 = GeneSetMap.loadFromFile(c.generalConfig.group1GeneSetFile, database, LayeredGraph.Type.GROUP1, maxPathCost, maxPathLength);
+		} catch(IOException e) {
+			System.err.println("Invalid group1GeneSetFile file or file format: " + c.generalConfig.group1GeneSetFile);
+			System.exit(1);
+			return;
+		}
 		GeneSetMap group2;			
 		final Map<String, GeneSet> combinedMap = new HashMap<>();
 		combinedMap.putAll(group1.getGeneSetMap());
-		if(c.generalConfig.group2GeneSetFile != null) {
-			group2 = GeneSetMap.loadFromFile(c.generalConfig.group2GeneSetFile, database, LayeredGraph.Type.GROUP2, maxPathCost, maxPathLength);
-			combinedMap.putAll(group2.getGeneSetMap());
+		if(c.generalConfig.group2GeneSetFile != null && !c.generalConfig.group2GeneSetFile.trim().isEmpty()) {
+			try {
+				group2 = GeneSetMap.loadFromFile(c.generalConfig.group2GeneSetFile, database, LayeredGraph.Type.GROUP2, maxPathCost, maxPathLength);
+				combinedMap.putAll(group2.getGeneSetMap());
+			} catch (IOException e) {
+				System.err.println("Invalid group2GeneSetFile file or file format: " + c.generalConfig.group2GeneSetFile);
+				System.exit(1);
+				return;
+			}
 		}else {
 			group2 = new GeneSetMap(LayeredGraph.Type.GROUP2, maxPathCost, maxPathLength);
 		}

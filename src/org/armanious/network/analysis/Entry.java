@@ -124,7 +124,7 @@ public class Entry {
 				final Object subConfig = Configuration.class.getField(lowercaseFirstChar(clazz.getSimpleName())).get(defaultConfig);
 				for(Field field : clazz.getFields()){
 					final Object defaultValue = field.get(subConfig);
-					System.out.println(pad(field.getName(), longestOption) + " = " + defaultValue);
+					System.out.println(pad(field.getName(), longestOption) + " = " + (defaultValue == null ? "" : defaultValue.toString()));
 				}
 				System.out.println();
 			}
