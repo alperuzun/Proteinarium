@@ -23,3 +23,16 @@ Open a command prompt, navigate to the folder containing Proteinarium.jar, and e
 ```bash
 proteinarium.bat <arguments>
 ```
+### Arguments
+The `<arguments>` are allowed to take one of the following forms:
+1. Show help: `-h` or `--help`
+2. Show available configuration options: `-o` or `--options`
+3. Show default configuration options: `-d` or `--default-config`
+**Note**: you can use the output of this command to generate an easy-to-modify configuration file.
+4. Specify the configuration file: `config=<configuration file>`
+where `<configuration file>` is the path to a text file containing all configuration options for this run of Proteinarium
+5. Set the configuration options directly:
+`group1GeneSetFile=<value> projectName=<value> maxPathLength=<value> ...`
+This option is provided primarily for scripting purposes; it is instead recommended to specify a configuration file as detailed above.
+
+For a complete list of configuration options and explanations of how they affect Proteinarium, refer to the *Configurability* section of the [Methods](Methods.pdf) document.
