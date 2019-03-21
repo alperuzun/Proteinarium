@@ -247,9 +247,10 @@ public final class Configuration {
 			final Map<String, String> map = new HashMap<>();
 			String s;
 			while((s = br.readLine()) != null){
-				if(s.startsWith("#") || s.startsWith("//") || s.trim().isEmpty()) continue;
+				s = s.trim();
+				if(s.startsWith("#") || s.startsWith("//") || s.isEmpty()) continue;
 				final int idx = s.indexOf('=');
-				if(idx == -1)
+				if(idx <= 0)
 					throw new RuntimeException("Configuration file " + file + " is invalid: \"" + s + "\"\n"
 							+ "\n\tMust have the form <configOption>=<value>\n"
 							+ "\tExample: maxPathLength=4");

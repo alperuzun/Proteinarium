@@ -3,6 +3,7 @@ package org.armanious.network.analysis;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -131,13 +132,19 @@ public class GeneSetMap {
 			String s;
 			while((s = br.readLine()) != null){
 				s = s.trim();
-				if(s.isEmpty()) continue;
+				if(s.isEmpty() || s.startsWith("#") || s.startsWith("//")) continue;
 				final int idx = s.indexOf('=');
-				if(idx == -1)
+				final String sampleIdentifier;
+				if(idx == -1 || (sampleIdentifier = s.substring(0, idx).trim()).isEmpty())
 					throw new RuntimeException("Input gene set file " + geneSetGroupFile + " is not validly formed.");
 				final String[] geneSymbols = s.substring(idx + 1).split(",");
-				for(int i = 0; i < geneSymbols.length; i++) geneSymbols[i] = geneSymbols[i].trim();
-				if(geneSetMap.put(s.substring(0, idx), Arrays.asList(geneSymbols)) != null){
+				final ArrayList<String> geneSymbolsList = new ArrayList<>();
+				for(int i = 0; i < geneSymbols.length; i++) {
+					if (!geneSymbols[i].trim().isEmpty()) {
+						geneSymbolsList.add(geneSymbols[i].trim());
+					}
+				}
+				if(geneSetMap.put(sampleIdentifier, Arrays.asList(geneSymbols)) != null){
 					System.err.println("Cannot have duplicate patient identifier: " + s.substring(0, idx));
 					System.exit(1);
 				}
