@@ -6,6 +6,21 @@ Simply download [Proteinarium.zip](https://drive.google.com/open?id=142WSDsFFtQ4
 ##### Requirements
 At least one of Java 1.8, Java 9, or Java 10 must be installed in order to run Proteinarium.
 
+## Getting Started
+If you are a new user looking to analyze or visualize a dataset for the first time, we recommend the following steps:
+1. Install Proteinarium as described above
+2. Create the Group 1 gene set file, `group1.txt` that Proteinarium will use. This is just a text file with one line per sample in the data set. Each line has the format `<Sample Identifier> = <HGNC Symbol 1>, <HGNC Symbol 2>, ..., <HGNC Symbol n>` for a sample with `n` genes.
+3. If you wish to analyze or visualize a second gene set, for example if you have cases and controls, create the Group 2 gene set file `group2.txt` as in Step 2.
+4. Create a configuration file `config.txt` with the following contents:
+With only one gene set file:
+```
+group1GeneSetFile = group1.txt
+group2GeneSetFile = group2.txt
+# Only include the above line with group2GeneSetFile if you have created the corresponding file and wish to analyze it.
+projectName = Project Name Here
+```
+5. Run Proteinarium using the steps indicated below. The `<arguments>` in this example case would just be `config=config.txt`
+
 ## Running Proteinarium
 The most reliable way to run Proteinarium is to run the following command:
 ```bash
@@ -35,4 +50,4 @@ where `<configuration file>` is the path to a text file containing all configura
 `group1GeneSetFile=<value> projectName=<value> maxPathLength=<value> ...`
 This option is provided primarily for scripting purposes; it is instead recommended to specify a configuration file as detailed above.
 
-For a complete list of configuration options and explanations of how they affect Proteinarium, refer to the *Configurability* section of the [Methods](Methods.pdf) document.
+For a complete list of configuration options and explanations of how they affect Proteinarium, refer to [Configuration](Configuration.pdf).
