@@ -66,29 +66,29 @@ public final class Configuration {
 			this.outputDirectory = outputDirectory;
 			
 			
-			String group1GeneSetGroupFile = map.get("group1GeneSetFile");
-			if(group1GeneSetGroupFile == null || group1GeneSetGroupFile.isEmpty()) {
+			String group1GeneSetFile = map.get("group1GeneSetFile");
+			if(group1GeneSetFile == null || group1GeneSetFile.isEmpty()) {
 				throw new RuntimeException("must specify group1GeneSetGroupFile");
 			}
-			if(!new File(group1GeneSetGroupFile).isAbsolute())
-				group1GeneSetGroupFile = activeDirectory + group1GeneSetGroupFile;
-			this.group1GeneSetFile = group1GeneSetGroupFile;
+			if(!new File(group1GeneSetFile).isAbsolute())
+				group1GeneSetFile = activeDirectory + group1GeneSetFile;
+			this.group1GeneSetFile = group1GeneSetFile;
 			
-			String group2GeneSetGroupFile = map.get("group2GeneSetFile");
-			if(group2GeneSetGroupFile != null && group2GeneSetGroupFile.isEmpty())
-				group2GeneSetGroupFile = null;
-			if(group2GeneSetGroupFile != null)
-				if(!new File(group2GeneSetGroupFile).isAbsolute())
-					group2GeneSetGroupFile = activeDirectory + group2GeneSetGroupFile;
-			this.group2GeneSetFile = group2GeneSetGroupFile;
+			String group2GeneSetFile = map.get("group2GeneSetFile");
+			if(group2GeneSetFile != null && group2GeneSetFile.isEmpty())
+				group2GeneSetFile = null;
+			if(group2GeneSetFile != null)
+				if(!new File(group2GeneSetFile).isAbsolute())
+					group2GeneSetFile = activeDirectory + group2GeneSetFile;
+			this.group2GeneSetFile = group2GeneSetFile;
 			
 			
 			String projectName = map.get("projectName");
 			if(projectName == null){
 				if(!map.getOrDefault("activeDirectory", "").isEmpty()){
 					projectName = new File(activeDirectory).getName();
-				}else if(group1GeneSetGroupFile != null){
-					projectName = group1GeneSetGroupFile.contains(".") ? group1GeneSetGroupFile.substring(0, group1GeneSetGroupFile.indexOf('.')) : group1GeneSetGroupFile;
+				}else if(group1GeneSetFile != null){
+					projectName = group1GeneSetFile.contains(".") ? group1GeneSetFile.substring(0, group1GeneSetFile.indexOf('.')) : group1GeneSetFile;
 				}
 			}
 			this.projectName = projectName;

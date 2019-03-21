@@ -1,0 +1,8 @@
+group1GeneSetFile=SIMdataset1_original.txt
+group2GeneSetFile=SIMdataset2_original.txt
+projectName=SIMDATA_mpl3
+maxVerticesToRender=50
+metaClusterThreshold=0.8
+bootstrappingRounds=0
+maxPathLength=2
+repulsionConstant=1.2
