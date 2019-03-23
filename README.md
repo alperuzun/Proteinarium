@@ -51,3 +51,33 @@ where `<configuration file>` is the path to a text file containing all configura
 This option is provided primarily for scripting purposes; it is instead recommended to specify a configuration file as detailed above.
 
 For a complete list of configuration options and explanations of how they affect Proteinarium, refer to [Configuration](Configuration.pdf).
+
+## Output
+All output files go to the folder specified by the `outputDirectory` configuration option. By default, this goes to a folder called `output` in the same directory that you run Proteinarium from.
+* **\<projectName\>_ClusterAnalyses.csv**: cluster analysis files
+* **\<projectName\>_Dendrogram.png**: dendrogram image
+* **\<projectName\>_Dendrogram.txt**: representation of the dendrogram in Newick tree format
+**Note**: if the entry is a single gene list, the above output files will not be generated. The output on the single sample will still be available as described below.
+
+**To analyze and visualize any cluster or individual sample from the dendrogram, enter \<cluster or sample ID\> (branch number) on the command line (ex: *C12*).** The corresponding analysis information and images will be available in the `\<outputDirectory\>/<cluster or sample ID\>` folder. For example, if with default options, one were to analyze cluster *C12*, the output would be located in `output/C12/`. The following output files are generated:
+* **\<cluster or sample ID\>_Dendrogram.txt**
+Then, for each of the five possible output networks--Group 1, Group 2, [Group 1 + Group 2], [Group 1 - Group 2], [Group 2 - Group 1], three files are generated to summarize that network. For example:
+* **\<cluster or sample ID\>_Group1_GeneSet.txt**: list of genes in the network and information about which input set they originated from (i.e. from Group 1, Group 2, or imputed from the interactome) and on how many samples the gene was found
+* **\<cluster or sample ID\>_Group1_Interactions.txt**: network interaction matrix
+* **\<cluster or sample ID\>_Group1.png**: image of the network
+
+To view the summary information for a particular cluster or sample, enter "info \<cluster ID\>" (ex: *info C87*) into the command line. The following information will be displayed:
+* *Average Distance (Height)*
+* *Bootstrapping Confidence*
+* *Total Number of Samples*
+* *Number in Group 1* (number of samples)
+* *Number in Group 2* (number of samples)
+* *p-value (Fisher Exact test for Group 1 and Group 2)*
+* *Group 1 and Group 2 Clustering Coefficient*
+* *Group 1 Clustering Coefficient*
+* *Group 2 Clustering Coefficient*
+* *Group 1 minus Group 2 Clustering Coefficient*
+* *Group 2 minus Group 1 Clustering Coefficient*
+* *Group 1 Patients* (Sample IDs of the individuals)
+* *Group 2 Patients* (Sample IDs of the individuals)
+**Note**: the above information is available for all patients at any time in the **\<projectName\>_ClusterAnalyses.csv** output file.
