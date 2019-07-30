@@ -78,7 +78,7 @@ public class ClusterAnalysis {
 		
 		this.clusterId = clusterId;
 		this.node = cluster;
-		this.normalizedHeight = cluster.getHeight();// / maxHeight;
+		this.normalizedHeight = cluster.getHeight() / maxHeight;
 		this.numberGroup1 = numberGroup1;
 		this.numberGroup2 = (isLeaf ? 1 : nodeLeafs.length) - numberGroup1;
 		this.numberCombined = this.numberGroup1 + this.numberGroup2;
@@ -270,7 +270,7 @@ Cluster Id            Num Group 2                Max Dissimilarity
 		final LayeredGraph<Protein> combinedGraph = combined.getLayeredGraph();
 		coefficients[0] = combinedGraph.getGlobalClusteringCoefficient();
 
-		final LayeredGraph<Protein> group1Graph = NetworkAnalysis.getReducedGraph(c, group2);
+		final LayeredGraph<Protein> group1Graph = NetworkAnalysis.getReducedGraph(c, group1);
 		coefficients[1] = group1Graph.getGlobalClusteringCoefficient();
 
 		final LayeredGraph<Protein> group2Graph = NetworkAnalysis.getReducedGraph(c, group2);
