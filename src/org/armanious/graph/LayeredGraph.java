@@ -92,6 +92,24 @@ public final class LayeredGraph<K extends Comparable<K>> extends AnnotatedGraph<
 		return g;
 	}
 	
+	private void resetMaxCount() {
+		double maxCount = 0;
+		for (K vertex : getVertices()) {
+			if (getCount(vertex) > maxCount) {
+				maxCount = getCount(vertex);
+			}
+		}
+		this.maxCount = maxCount;
+	}
+	
+	@Override
+	public Graph<K> reduceByPaths(Collection<K> endpoints, int maxVertices, boolean bidirectional) {
+		final Graph<K> g = super.reduceByPaths(endpoints, maxVertices, bidirectional);
+		assert(g instanceof LayeredGraph);
+		((LayeredGraph<K>) g).resetMaxCount();
+		return g;
+	}
+	
 	@Override
 	Graph<K> emptyGraph() {
 		return new LayeredGraph<>(type, maxCount, maxPathLength);

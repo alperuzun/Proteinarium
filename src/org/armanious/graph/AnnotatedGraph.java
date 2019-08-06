@@ -1,5 +1,6 @@
 package org.armanious.graph;
 
+import java.util.Collection;
 import java.util.HashMap;
 
 public class AnnotatedGraph<K extends Comparable<K>, T extends Comparable<T>> extends Graph<K> {
@@ -31,6 +32,23 @@ public class AnnotatedGraph<K extends Comparable<K>, T extends Comparable<T>> ex
 		if(!annotations.containsKey(edge.getTarget())) annotations.put(edge.getTarget(), defaultAnnotation);
 	}
 	
+	@Override
+	Graph<K> emptyGraph() {
+		return new AnnotatedGraph<>(defaultAnnotation, maxPathCost, maxPathLength);
+	}
+	
+	@Override
+	public Graph<K> reduceByPaths(Collection<K> endpoints, int maxVertices, boolean bidirectional) {
+		final Graph<K> g = super.reduceByPaths(endpoints, maxVertices, bidirectional);
+		assert(g instanceof AnnotatedGraph);
+		@SuppressWarnings("unchecked")
+		final AnnotatedGraph<K, T> ag = (AnnotatedGraph<K, T>) g;
+		for (K vertex : ag.getVertices()) {
+			ag.setAnnotation(vertex, this.getAnnotation(vertex));
+		}
+		return g;
+	}
+
 	@Override
 	public void clear(){
 		super.clear();
