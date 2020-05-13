@@ -26,11 +26,11 @@ public class Entry {
 			}
 		} catch (IOException e) {
 			System.err.println("Error reading configuration file");
-			System.exit(1);
+			printHelp(1);
 			return;
 		} catch (RuntimeException e) {
 			System.err.println("Error: " + e.getMessage());
-			System.exit(1);
+			printHelp(1);
 			return;
 		}
 		try {

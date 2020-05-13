@@ -115,6 +115,8 @@ public class Renderer<K extends Comparable<K>> {
 		// System.out.println("Attempting to create buffered image with width=" + width + ", height=" + height);
 		final BufferedImage image = new BufferedImage((int)(width * (1 + padding)), (int)(height * (1 + padding)), BufferedImage.TYPE_INT_ARGB);
 		final Graphics2D g = RenderingUtils.prepareBufferedImageGraphics(rc, image);
+		g.setColor(Color.WHITE);
+		g.fillRect(0, 0, image.getWidth(), image.getHeight());
 		
 		//TODO cache BasicStroke objects by width
 		for(int i = 0; i < positions.length; i++){
