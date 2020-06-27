@@ -1,7 +1,7 @@
 # Proteinarium
 
 ## Installation
-Simply download [Proteinarium.zip](https://drive.google.com/open?id=142WSDsFFtQ4cX28BdUvpavVSe4tiOq8w "Download Proteinarium") and unzip its contents into a folder of your choosing. It contains the precompiled Proteinarium.jar file and two helper files: one for Mac OS X/Unix environments, and another for Windows environments. You can download Graphical User Interface (GUI) version from this link, ProteinariumGUIversion.zip.
+Simply download [Proteinarium.zip](https://drive.google.com/open?id=142WSDsFFtQ4cX28BdUvpavVSe4tiOq8w "Download Proteinarium") and unzip its contents into a folder of your choosing. It contains the precompiled Proteinarium.jar file and two helper files: one for Mac OS X/Unix environments, and another for Windows environments. You can download Graphical User Interface (GUI) version from this link, [ProteinariumGUIversion.zip](https://drive.google.com/file/d/1vUbaPBWS9AHVm6nLTtTLUX3tvaIVYwPb/view?usp=sharing).
 
 ##### Requirements
 At least one of Java 1.8, Java 9, or Java 10 must be installed in order to run Proteinarium.
