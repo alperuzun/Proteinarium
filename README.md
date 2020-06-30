@@ -20,8 +20,10 @@ group2GeneSetFile = group2.txt
 projectName = Project Name Here
 ```
 ----------------------------------------------
+<div class="bg-blue-light mb-2">
 ## 1) Running Proteinarium on Command Line
 ## 2) Running Proteinarium with Graphical User Interface (GUI)
+  </div>
 ---------------------------------------------
 ## 1) Running Proteinarium on Command Line
 The `<arguments>` is `config=config.txt`
