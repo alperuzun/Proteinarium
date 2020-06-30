@@ -19,9 +19,13 @@ group2GeneSetFile = group2.txt
 # Only include the above line with group2GeneSetFile if you have created the corresponding file and wish to analyze it.
 projectName = Project Name Here
 ```
-5. Run Proteinarium using the steps indicated below. The `<arguments>` in this example case would just be `config=config.txt`
+----------------------------------------------
+## 1) Running Proteinarium on Command Line
+## 2) Running Proteinarium with Graphical User Interface (GUI)
+---------------------------------------------
+## 1) Running Proteinarium on Command Line
+The `<arguments>` is `config=config.txt`
 
-## Running Proteinarium
 The most reliable way to run Proteinarium is to run the following command:
 ```bash
 java -jar <path to Proteinarium.jar> <arguments>
