@@ -23,7 +23,7 @@ group2GeneSetFile = group2.txt
 projectName = Project Name Here
 ```
 
-## 2. Running Proteinarium on Command Line
+## 2. Running Proteinarium 
 The `<arguments>` is `config=config.txt`
 
 The most reliable way to run Proteinarium is to run the following command:
