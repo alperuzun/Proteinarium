@@ -1,0 +1,8 @@
+group1GeneSetFile=unmethylated_srd5a2_prostate_gene_list_top100.txt
+group2GeneSetFile=methylated_srd5a2_prostate_gene_list_top100.txt
+projectName=Prostate-TOP100_mpl2
+maxVerticesToRender=50
+metaClusterThreshold=0.8
+bootstrappingRounds=0
+maxPathLength=3
+repulsionConstant=1.2
