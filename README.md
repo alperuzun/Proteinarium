@@ -3,9 +3,21 @@
 ## Installation
 Simply download [Proteinarium.zip](https://drive.google.com/file/d/14Lz1EVj1qY9N5f9_KrMoiYJeqhAo8XvA/view?usp=sharing) and unzip its contents into a folder of your choosing. It contains the precompiled Proteinarium.jar file and two helper files: one for Mac OS X/Unix environments, and another for Windows environments. You can download Graphical User Interface (GUI) version from this link, [ProteinariumGUIversion.zip](https://drive.google.com/file/d/1I5PK5FQiImZ9qmvDDUI_EflVjTKwzlvV/view?usp=sharing).
 
-##### Requirements
+### Requirements
 At least one of Java 1.8, Java 9, or Java 10 must be installed in order to run Proteinarium. The Proteinarium GUI, in addition to Java, requires JavaFX to be installed. Java 1.8 comes with JavaFX as part of the JDK and JRE.
 ----------------------------------------------
+## Video Tutorials
+We've recorded two video tutorials that show how to download and run Proteinarium using the command line and graphical user interfaces. Click the video thumbnails below to watch them.
+
+#### Command Line Interface Video Tutorial
+[![Alt text](https://img.youtube.com/vi/bC6nTe2I2P4/0.jpg)](https://www.youtube.com/watch?v=bC6nTe2I2P4)
+
+
+#### Graphical User Interface Video Tutorial
+[![Alt text](https://img.youtube.com/vi/50AyOLp-Zi4/0.jpg)](https://www.youtube.com/watch?v=50AyOLp-Zi4)
+
+----------------------------------------------
+
 ## Running Proteinarium on Command Line
 
 ## 1. Getting Started
@@ -21,15 +33,6 @@ group2GeneSetFile = group2.txt
 projectName = Project Name Here
 ```
 
-## Video Tutorials
-We've recorded two video tutorials that show how to download and run Proteinarium using the command line and graphical user interfaces. Click the video thumbnails below to watch them.
-
-#### Command Line Interface Video Tutorial
-[![Alt text](https://img.youtube.com/vi/bC6nTe2I2P4/0.jpg)](https://www.youtube.com/watch?v=bC6nTe2I2P4)
-
-
-#### Graphical User Interface Video Tutorial
-[![Alt text](https://img.youtube.com/vi/50AyOLp-Zi4/0.jpg)](https://www.youtube.com/watch?v=50AyOLp-Zi4)
 
 ## 2. Running Proteinarium
 The `<arguments>` is `config=config.txt`
