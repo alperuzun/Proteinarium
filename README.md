@@ -3,7 +3,7 @@
 ## Installation
 Simply download [Proteinarium.zip](https://drive.google.com/file/d/14Lz1EVj1qY9N5f9_KrMoiYJeqhAo8XvA/view?usp=sharing) and unzip its contents into a folder of your choosing. It contains the precompiled Proteinarium.jar file and two helper files: one for Mac OS X/Unix environments, and another for Windows environments. You can download Graphical User Interface (GUI) version from this link, [ProteinariumGUIversion.zip](https://drive.google.com/file/d/1I5PK5FQiImZ9qmvDDUI_EflVjTKwzlvV/view?usp=sharing).
 
-### Requirements
+## Requirements
 At least one of Java 1.8, Java 9, or Java 10 must be installed in order to run Proteinarium. The Proteinarium GUI, in addition to Java, requires JavaFX to be installed. Java 1.8 comes with JavaFX as part of the JDK and JRE.
 ----------------------------------------------
 ## Video Tutorials
@@ -18,7 +18,7 @@ We've recorded two video tutorials that show how to download and run Proteinariu
 
 ----------------------------------------------
 
-## Running Proteinarium on Command Line
+### Running Proteinarium on Command Line
 
 ## 1. Getting Started
 If you are a new user looking to analyze or visualize a dataset for the first time, we recommend the following steps:
@@ -99,7 +99,7 @@ To view the summary information for a particular cluster or sample, enter "info 
 **Note**: the above information is available for all patients at any time in the **\<projectName\>_ClusterAnalyses.csv** output file.
 
 ----------------------------------------------
-## Running Proteinarium with Graphical User Interface (GUI)
+### Running Proteinarium with Graphical User Interface (GUI)
 
 ## 1.	Getting Started
 
