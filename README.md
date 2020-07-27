@@ -34,10 +34,10 @@ We've recorded two video tutorials that show how to download and run Proteinariu
 
 ## 1. Getting Started
 If you are a new user looking to analyze or visualize a dataset for the first time, we recommend the following steps:
-1. Install Proteinarium as described above
-2. Create the Group 1 gene set file, `group1.txt` that Proteinarium will use. This is just a text file with one line per sample in the data set. Each line has the format `<Sample Identifier> = <HGNC Symbol 1>, <HGNC Symbol 2>, ..., <HGNC Symbol n>` for a sample with `n` genes.
-3. If you wish to analyze or visualize a second gene set, for example if you have cases and controls, create the Group 2 gene set file `group2.txt` as in Step 2.
-4. Create a configuration file `config.txt` with the following contents:
+* Install Proteinarium as described above
+* Create the Group 1 gene set file, `group1.txt` that Proteinarium will use. This is just a text file with one line per sample in the data set. Each line has the format `<Sample Identifier> = <HGNC Symbol 1>, <HGNC Symbol 2>, ..., <HGNC Symbol n>` for a sample with `n` genes.
+* If you wish to analyze or visualize a second gene set, for example if you have cases and controls, create the Group 2 gene set file `group2.txt` as in Step 2.
+* Create a configuration file `config.txt` with the following contents:
 ```
 group1GeneSetFile = group1.txt
 group2GeneSetFile = group2.txt
@@ -66,13 +66,13 @@ proteinarium.bat <arguments>
 ```
 ## Arguments
 The `<arguments>` are allowed to take one of the following forms:
-1. Show help: `-h` or `--help`
-2. Show available configuration options: `-o` or `--options`
-3. Show default configuration options: `-d` or `--default-config`
+* Show help: `-h` or `--help`
+* Show available configuration options: `-o` or `--options`
+* Show default configuration options: `-d` or `--default-config`
 **Note**: you can use the output of this command to generate an easy-to-modify configuration file.
-4. Specify the configuration file: `config=<configuration file>`
+* Specify the configuration file: `config=<configuration file>`
 where `<configuration file>` is the path to a text file containing all configuration options for this run of Proteinarium
-5. Set the configuration options directly:
+* Set the configuration options directly:
 `group1GeneSetFile=<value> projectName=<value> maxPathLength=<value> ...`
 This option is provided primarily for scripting purposes; it is instead recommended to specify a configuration file as detailed above.
 
@@ -88,7 +88,7 @@ All output files go to the folder specified by the `outputDirectory` configurati
 ## 3. Visualizing Clusters
 To analyze and visualize any cluster or individual sample from the dendrogram, enter \<cluster or sample ID\> (branch number) on the command line (ex: *C12*).
 
-The corresponding analysis information and images will be available in the `\<outputDirectory\>/<cluster or sample ID\>` folder. For example, if one were to analyze cluster *C12* with default configuration options, the output would be located in `output/C12/`. The following output files are generated:
+The corresponding analysis information and images will be available in the `\</outputDirectory\>/</cluster or /sample ID\>` folder. For example, if one were to analyze cluster *C12* with default configuration options, the output would be located in `/output/C12/`. The following output files are generated:
 * **\<cluster or sample ID\>_Dendrogram.txt**
 
 Then, for each of the five possible output networks--Group 1, Group 2, [Group 1 + Group 2], [Group 1 - Group 2], [Group 2 - Group 1], three files are generated to summarize that network.
