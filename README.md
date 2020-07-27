@@ -4,7 +4,7 @@ Proteinarium is a multi-sample protein-protein interaction (PPI) tool to identif
 
 # Publication and Citation Information
 
-Read about Proteinarium in our [publication in Genomics](https://pubmed.ncbi.nlm.nih.gov/32702417/).
+Read about Proteinarium in our [publication in Genomics](https://pubmed.ncbi.nlm.nih.gov/32702417/)!
 
 **Please cite our publication if you use Proteinarium:**
 
