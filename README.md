@@ -190,4 +190,4 @@ To view the summary information for a particular cluster or sample, enter "info 
 
 *	Select File > New Analysis to re-run Proteinarium with these new settings
 
-NOTE: Previous data will be overwritten.  If you prefer not to overwrite previous data, first select File > Home, make sure gene set files are chosen correctly and change the Project Name. Then adjust parameters with the setting button and click “Run Proteinarium”.  
+*NOTE:* Previous data will be overwritten.  If you prefer not to overwrite previous data, first select File > Home, make sure gene set files are chosen correctly and change the Project Name. Then adjust parameters with the setting button and click “Run Proteinarium”.  
