@@ -15,7 +15,9 @@ Simply download [Proteinarium.zip](https://drive.google.com/file/d/14Lz1EVj1qY9N
 
 ## Requirements
 At least one of Java 1.8, Java 9, or Java 10 must be installed in order to run Proteinarium. The Proteinarium GUI, in addition to Java, requires JavaFX to be installed. Java 1.8 comes with JavaFX as part of the JDK and JRE.
+
 ----------------------------------------------
+
 ## Video Tutorials
 We've recorded two video tutorials that show how to download and run Proteinarium using the command line and graphical user interfaces. Click the video thumbnails below to watch them.
 
@@ -42,7 +44,6 @@ group2GeneSetFile = group2.txt
 # Only include the above line with group2GeneSetFile if you have created the corresponding file and wish to analyze it.
 projectName = Project Name Here
 ```
-
 
 ## 2. Running Proteinarium
 The `<arguments>` is `config=config.txt`
@@ -114,6 +115,7 @@ To view the summary information for a particular cluster or sample, enter "info 
 **Note**: the above information is available for all patients at any time in the **\<projectName\>_ClusterAnalyses.csv** output file.
 
 ----------------------------------------------
+
 ## Running Proteinarium with Graphical User Interface (GUI)
 
 ## 1.	Getting Started
@@ -146,7 +148,6 @@ To view the summary information for a particular cluster or sample, enter "info 
      * **\<projectName>\_ClusterAnalyses.csv:** cluster analysis files
      * **\<projectName>\_Dendrogram.png:** dendrogram image
      * **\<projectName>\_Dendrogram.txt:** representation of the dendrogram in Newick tree format
-
 
 ## 3.	Viewing Clusters
 
