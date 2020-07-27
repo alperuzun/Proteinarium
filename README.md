@@ -2,7 +2,7 @@
 
 Proteinarium is a multi-sample protein-protein interaction (PPI) tool to identify clusters of samples with shared networks.
 
-# Publication and Citation Information
+## Publication and Citation Information
 
 Read about Proteinarium in our [publication in Genomics](https://pubmed.ncbi.nlm.nih.gov/32702417/)!
 
