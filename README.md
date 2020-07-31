@@ -148,6 +148,8 @@ To view the summary information for a particular cluster or sample, enter "info 
      * **\<projectName>\_ClusterAnalyses.csv:** cluster analysis files
      * **\<projectName>\_Dendrogram.png:** dendrogram image
      * **\<projectName>\_Dendrogram.txt:** representation of the dendrogram in Newick tree format
+     
+*    Running Proteinarium using the GUI for prolonged periods of time can use excess amounts of memory, to avoid this please exit out of the Proteinarium GUI between Proteinarium analyses.  
 
 ## 3.	Viewing Clusters
 
